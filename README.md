@@ -61,7 +61,16 @@
    ```bash
    python manage.py migrate
    ```
-5. Run the development server:
+5. Copy the example environment file and set your own secret key:
+   ```bash
+   cp .env.example .env
+   # Edit .env to set your SECRET_KEY and other settings
+   ```
+6. Create a superuser to access the admin interface:
+   ```bash
+   python manage.py createsuperuser
+   ```
+7. Run the development server:
    ```bash
    python manage.py runserver
    ```
