@@ -25,6 +25,41 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponseBadRequest
 
 
+from django.http import HttpResponse
+from datetime import datetime
+
+@login_required
+@permission_required('shoppinglist.view_item', raise_exception=True)
+def download_shopping_list(request):
+    """
+    Download the current shopping list as a markdown file.
+    Query param 'kind' can be 'need', 'want', or omitted for both.
+    """
+    kind = request.GET.getlist('kind')
+    if not kind:
+        kind = ['need', 'want']
+    needs = Item.objects.filter(kind='need', obtained=False) if 'need' in kind else []
+    wants = Item.objects.filter(kind='want', obtained=False) if 'want' in kind else []
+
+    lines = []
+    if 'need' in kind:
+        lines.append('# Needs\n')
+        for item in needs:
+            lines.append(f'- [ ] {item.text}\n')
+        lines.append('\n')
+    if 'want' in kind:
+        lines.append('# Wants\n')
+        for item in wants:
+            lines.append(f'- [ ] {item.text}\n')
+        lines.append('\n')
+
+    today = datetime.now().strftime('%m-%d-%Y')
+    filename = f'shopping_list-{today}.md'
+    response = HttpResponse(''.join(lines), content_type='text/markdown')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
 @login_required
 @permission_required('shoppinglist.view_item', raise_exception=True)
 def item_list(request):

@@ -3,6 +3,11 @@
 {% block title %}Shopping List{% endblock %}
 
 {% block content %}
+<form method="get" action="{% url 'download_shopping_list' %}" style="margin-bottom: 1.5em;">
+    <label><input type="checkbox" name="kind" value="need" checked> Needs</label>
+    <label><input type="checkbox" name="kind" value="want" checked> Wants</label>
+    <button type="submit">Download as Markdown</button>
+</form>
 <div style="display: flex; justify-content: space-between;">
     <section style="width: 48%;">
         <h2>Need</h2>

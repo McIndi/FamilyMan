@@ -14,4 +14,5 @@ urlpatterns = [
     path('<int:pk>/update/', views.item_update, name='item_update'),  # Update an item.
     path('<int:pk>/delete/', views.item_delete, name='item_delete'),  # Delete an item.
     path('past-items/', past_items, name='past_items'),  # List all obtained items.
+    path('download/', views.download_shopping_list, name='download_shopping_list'),  # Download shopping list as markdown.
 ] + router.urls  # Include API routes.
