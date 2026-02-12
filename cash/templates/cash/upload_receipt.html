@@ -1,0 +1,11 @@
+{% extends 'project/base.html' %}
+{% block content %}
+<h1>Upload Receipt</h1>
+<p>Expense: {{ expense.amount }} for {{ expense.category }}</p>
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Upload</button>
+    <a href="{% url 'cash_transaction_list' %}">Cancel</a>
+</form>
+{% endblock %}

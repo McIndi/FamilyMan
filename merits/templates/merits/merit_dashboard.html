@@ -1,0 +1,101 @@
+{% extends 'project/base.html' %}
+{% load static %}
+{% block title %}Merit Dashboard{% endblock %}
+
+{% block content %}
+    <h1>Merit Dashboard</h1>
+    <h2>Merit Overview</h2>
+    <ul>
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Merit Points</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for child, score in score_by_child.items %}
+                <tr>
+                    <td>{{ child.user.username }}</td>
+                    <td>
+                        <a href="#" class="demerit-link" data-child-id="{{ child.id }}">&#x2796;</a>
+                        {{ score }} points
+                        <a href="#" class="merit-link" data-child-id="{{ child.id }}">&#x2795;</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </ul>
+
+    <!-- Add modals for MeritForm and DemeritForm -->
+    <div id="merit-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Add Merit</h2>
+            <form method="post" action="{% url 'add_merit' %}">
+                {% csrf_token %}
+                <input type="hidden" name="child_id" id="merit-child-id">
+                {{ merit_form.as_p }}
+                <button type="submit">Submit</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="demerit-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Add Demerit</h2>
+            <form method="post" action="{% url 'add_demerit' %}">
+                {% csrf_token %}
+                <input type="hidden" name="child_id" id="demerit-child-id">
+                {{ demerit_form.as_p }}
+                <button type="submit">Submit</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const meritLinks = document.querySelectorAll('.merit-link');
+            const demeritLinks = document.querySelectorAll('.demerit-link');
+            const meritModal = document.getElementById('merit-modal');
+            const demeritModal = document.getElementById('demerit-modal');
+            const meritChildIdInput = document.getElementById('merit-child-id');
+            const demeritChildIdInput = document.getElementById('demerit-child-id');
+            const closeButtons = document.querySelectorAll('.close');
+
+            meritLinks.forEach(link => {
+                link.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    meritChildIdInput.value = this.dataset.childId;
+                    meritModal.style.display = 'block';
+                });
+            });
+
+            demeritLinks.forEach(link => {
+                link.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    demeritChildIdInput.value = this.dataset.childId;
+                    demeritModal.style.display = 'block';
+                });
+            });
+
+            closeButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    meritModal.style.display = 'none';
+                    demeritModal.style.display = 'none';
+                });
+            });
+
+            window.addEventListener('click', function(event) {
+                if (event.target === meritModal) {
+                    meritModal.style.display = 'none';
+                }
+                if (event.target === demeritModal) {
+                    demeritModal.style.display = 'none';
+                }
+            });
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,76 @@
+.add-icon {
+    color: transparent;  
+    text-shadow: 0 0 0 green;
+    cursor: pointer;
+}
+
+/* Styling for green + icons using text-shadow hack */
+.green-plus {
+    color: transparent;  /* Make the text itself transparent */
+    text-shadow: 0 0 0 green;  /* Apply green color via text-shadow */
+    cursor: pointer;  /* Change cursor to pointer for better UX */
+    background: none;  /* Remove any background */
+    border: none;  /* Remove any border */
+}
+
+.day-view {
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    gap: 1px;
+}
+
+.hour-column {
+    border: 1px solid #ccc;
+    padding: 5px;
+}
+
+.event {
+    background-color: #f0f8ff;
+    border: 1px solid #007bff;
+    font-size: 0.8em; /* Reduced font size for better readability */
+    padding: 2px;
+    margin: 2px 0;
+    text-align: center;
+    color: var(--event-text-color, black); /* Default to black text */
+    background-color: var(--event-bg-color, white); /* Default to white background */
+}
+
+.week-view {
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+}
+
+.day-column {
+    border: 1px solid #ccc;
+    padding: 5px;
+}
+
+.month-view {
+    grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: minmax(50px, 1fr); /* Adjusted row height */
+    gap: 1px;
+}
+
+.week-row {
+    display: contents; /* Ensures rows are treated as part of the grid */
+}
+
+.day-cell {
+    border: 1px solid #ccc;
+    padding: 5px;
+    text-align: center;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --event-text-color: white;
+        --event-bg-color: black;
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        --event-text-color: black;
+        --event-bg-color: white;
+    }
+}

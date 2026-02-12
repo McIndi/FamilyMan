@@ -1,0 +1,62 @@
+{% extends 'project/base.html' %}
+{% block content %}
+<h1>Cash Transactions</h1>
+<div style="margin-bottom: 1em;">
+    <strong>Family Cash Total:</strong> <span style="font-size:1.2em;">${{ family_cash|floatformat:2 }}</span>
+</div>
+<form method="get" style="margin-bottom: 1em;">
+    <label>Period:
+        <select name="period">
+            <option value="week" {% if period == 'week' %}selected{% endif %}>Last Week</option>
+            <option value="month" {% if period == 'month' %}selected{% endif %}>Last Month</option>
+            <option value="year" {% if period == 'year' %}selected{% endif %}>Last Year</option>
+        </select>
+    </label>
+    <label>Search:
+        <input type="text" name="search" value="{{ search }}" placeholder="Search notes or categories">
+    </label>
+    <label>Categories:
+        <select name="categories" multiple size="3">
+            {% for category in categories %}
+                <option value="{{ category.id }}" {% if category.id in selected_categories %}selected{% endif %}>{{ category.name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <button type="submit">Filter</button>
+</form>
+<div style="margin-bottom: 1em;">
+    <a class="buttonLink" href="{% url 'add_fund' %}">Add Funds</a>
+    <a class="buttonLink" href="{% url 'add_expense' %}">Record Expense</a>
+</div>
+<h2>Funds</h2>
+<ul>
+    {% for fund in funds %}
+        <li>
+            {{ fund.date|date:"M d, Y H:i" }}: <strong>+${{ fund.amount }}</strong> {% if fund.note %}({{ fund.note }}){% endif %}
+            <a href="{% url 'edit_fund' fund.id %}">Edit</a> |
+            <a href="{% url 'delete_fund' fund.id %}">Delete</a>
+        </li>
+    {% empty %}
+        <li>No funds added in this period.</li>
+    {% endfor %}
+</ul>
+<h2>Expenses</h2>
+<ul>
+    {% for expense in expenses %}
+        <li>
+            {{ expense.date|date:"M d, Y H:i" }}: <strong>-${{ expense.amount }}</strong> {% if expense.category %}({{ expense.category }}){% endif %} {% if expense.note %}({{ expense.note }}){% endif %}
+            <a href="{% url 'edit_expense' expense.id %}">Edit</a> |
+            <a href="{% url 'delete_expense' expense.id %}">Delete</a>
+            {% if expense.receipts.all %}
+                <ul>
+                    {% for receipt in expense.receipts.all %}
+                        <li><a href="{{ receipt.image.url }}" target="_blank">Receipt</a> (uploaded {{ receipt.uploaded_at|date:"M d, Y H:i" }})</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </li>
+    {% empty %}
+        <li>No expenses recorded in this period.</li>
+    {% endfor %}
+</ul>
+{% endblock %}

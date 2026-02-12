@@ -1,0 +1,36 @@
+{% extends 'project/base.html' %}
+
+{% block content %}
+<h1>Inbox</h1>
+<a href="{% url 'compose_message' %}" class="btn btn-primary">Write a Message</a>
+<ul>
+    {% for recipient in page_obj %}
+    <li>
+        <a href="{% url 'message_detail' recipient.message.id %}">
+            {% if not recipient.read_at %}<strong>[Unread]</strong>{% endif %}
+            {{ recipient.message.subject }} - {{ recipient.message.sent_at|date:"M d, Y H:i" }}
+        </a>
+        <a href="{% url 'confirm_delete_message' recipient.message.id %}" class="btn btn-danger" title="Delete">&#x2716;</a>
+        <a href="{% url 'edit_message' recipient.message.id %}" class="btn btn-secondary" title="Edit">&#x270E;</a>
+    </li>
+    {% endfor %}
+</ul>
+
+<div class="pagination">
+    <span class="step-links">
+        {% if page_obj.has_previous %}
+            <a href="?page=1">&laquo; first</a>
+            <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+        </span>
+
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+        {% endif %}
+    </span>
+</div>
+{% endblock %}

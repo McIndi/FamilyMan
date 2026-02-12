@@ -1,0 +1,72 @@
+{% extends 'project/base.html' %}
+
+{% block title %}Family Dashboard{% endblock %}
+
+{% block content %}
+<h1>Family Dashboard</h1>
+
+<h2>Create a New Family</h2>
+<form method="post" action="">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="create_family">
+    <label for="family_name">Family Name:</label>
+    <input type="text" id="family_name" name="family_name" required>
+    <button type="submit">Create Family</button>
+</form>
+
+<h2>Your Families</h2>
+<ul>
+    {% for family in families %}
+    <li style="display: flex; justify-content: space-between; align-items: center; padding-left: 5px; border: 1px solid #ccc; margin-bottom: 5px; border-radius: 8px;">
+        <span style="margin-right: auto;">{{ family.name }}</span>
+        <form method="post" action="" style="display: inline;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_family">
+            <input type="hidden" name="family_id" value="{{ family.id }}">
+            <button type="submit" style="background: none; border: none; color: red; cursor: pointer;">
+                &#x274C; <!-- Unicode red X icon -->
+            </button>
+        </form>
+    </li>
+    {% endfor %}
+</ul>
+
+{% if children %}
+<h2>Children in {{ request.current_family.name }}</h2>
+<ul>
+    {% for child in children %}
+    <li>{{ child.user.username }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+<a href="{% url 'add_child' %}">Add Child</a>
+
+<h2>Switch Family Context</h2>
+<form method="post" action="{% url 'switch_family' %}">
+    {% csrf_token %}
+    <select name="family_id" onchange="this.form.submit()">
+        {% for family in families %}
+        <option value="{{ family.id }}" {% if family == request.current_family %}selected{% endif %}>
+            {{ family.name }}
+        </option>
+        {% endfor %}
+    </select>
+</form>
+
+{% if request.current_family %}
+<h2>Your Role in {{ request.current_family.name }}</h2>
+<p>Current Role: {{ current_family_role }}</p>
+<form method="post" action="{% url 'update_role' %}">
+    {% csrf_token %}
+    <input type="hidden" name="family_id" value="{{ request.current_family.id }}">
+    <label for="role">Update Role:</label>
+    <select id="role" name="role">
+        <option value="parent" {% if current_family_role == 'parent' %}selected{% endif %}>Parent</option>
+        <option value="child" {% if current_family_role == 'child' %}selected{% endif %}>Child</option>
+    </select>
+    <button type="submit">Update Role</button>
+</form>
+{% endif %}
+
+{% endblock %}

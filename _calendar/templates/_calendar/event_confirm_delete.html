@@ -1,0 +1,16 @@
+{% extends 'project/base.html' %}
+
+{% block title %}Confirm Delete{% endblock %}
+
+{% block content %}
+<h1>Are you sure you want to delete "{{ event.title }}"?</h1>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit">Yes, delete</button>
+</form>
+{% if event.is_recurring %}
+    <p>This is a recurring event. Deleting it will remove all occurrences.</p>
+{% endif %}
+<a href="#" onclick="history.go(-1)">Go Back</a>
+
+{% endblock %}

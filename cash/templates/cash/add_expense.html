@@ -1,0 +1,27 @@
+{% extends 'project/base.html' %}
+{% block content %}
+<h1>Record Expense</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Record Expense</button>
+    <a href="{% url 'cash_transaction_list' %}">Cancel</a>
+</form>
+
+<hr>
+<button type="button" onclick="document.getElementById('category-form').style.display='block';this.style.display='none';">Add New Category</button>
+<div id="category-form" style="display:none; margin-top:1em;">
+    <form method="post">
+        {% csrf_token %}
+        {{ category_form.as_p }}
+        <button type="submit" name="add_category" class="btn btn-secondary">Create Category</button>
+    </form>
+</div>
+<script>
+// If there are errors in the category form, show it automatically
+{% if category_form.errors %}
+document.getElementById('category-form').style.display = 'block';
+document.querySelector('button[onclick]').style.display = 'none';
+{% endif %}
+</script>
+{% endblock %}

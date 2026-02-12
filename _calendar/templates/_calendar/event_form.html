@@ -1,0 +1,13 @@
+{% extends 'project/base.html' %}
+
+{% block title %}Event Form{% endblock %}
+
+{% block content %}
+<h1>{% if form.instance.pk %}Edit Event{% else %}Create Event{% endif %}</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save</button>
+</form>
+<a href="{% url 'week_view' form.instance.when.year form.instance.when.month form.instance.when.day %}">Back to Week View</a>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% load static week_start %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}FamilyMan{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/pico.classless.min.css' %}">
+    <style>
+        .top-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+        .top-nav ul {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .top-nav .nav-right {
+            margin-left: auto;
+        }
+        @media (max-width: 900px) {
+            .top-nav {
+                flex-wrap: wrap;
+                row-gap: 0.75rem;
+            }
+            .top-nav .nav-right {
+                margin-left: 0;
+            }
+        }
+    </style>
+    <!-- <link rel="stylesheet" href="https://classless.de/classless.css"> -->
+    <!-- <link rel="stylesheet" href="https://classless.de/classless-tiny.css"> -->
+    <!-- <link rel="stylesheet" href="https://cdn.simplecss.org/sim ple.min.css"> -->
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav class="top-nav">
+        <ul class="nav-left">
+            <li class="float-left"><a href="{% url 'landing_page' %}">Home</a></li>
+            <li><a href="{% url 'item_list' %}">Shopping List</a></li>
+            {% week_start as week_start_date %}
+            <li><a href="{% url 'week_view' week_start_date.year week_start_date.month week_start_date.day %}">Calendar</a></li>
+            <li><a href="{% url 'inbox' %}">Inbox</a></li>
+            <li><a href="{% url 'merit_dashboard' %}">Merits</a></li>
+            <li><a href="{% url 'family_dashboard' %}">Family</a></li>
+            <li><a href="{% url 'cash_transaction_list' %}">Cash</a></li>
+        </ul>
+        <ul class="nav-right">
+            <li>
+                <label style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <input id="theme-toggle" type="checkbox" role="switch" aria-label="Toggle dark mode">
+                    Dark Mode
+                </label>
+            </li>
+            {% if user.is_authenticated %}
+                <li>
+                    <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" style="background: none; border: none; color: inherit; cursor: pointer;">Logout</button>
+                    </form>
+                </li>
+                <li>
+                    <form method="post" action="{% url 'switch_family' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <select name="family_id" onchange="this.form.submit()">
+                            {% for family in user.families.all %}
+                            <option value="{{ family.id }}" {% if family == request.current_family %}selected{% endif %}>
+                                {{ family.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </li>
+            {% else %}
+                <li><a href="{% url 'login' %}">Login</a></li>
+                <li><a href="{% url 'signup' %}">Sign Up</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    <script>
+        (function () {
+            var storageKey = "theme";
+            var root = document.documentElement;
+            var toggle = document.getElementById("theme-toggle");
+
+            if (!toggle) {
+                return;
+            }
+
+            function applyTheme(theme) {
+                if (theme === "dark" || theme === "light") {
+                    root.setAttribute("data-theme", theme);
+                    toggle.checked = theme === "dark";
+                } else {
+                    root.removeAttribute("data-theme");
+                    toggle.checked = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+                }
+            }
+
+            var savedTheme = null;
+            try {
+                savedTheme = localStorage.getItem(storageKey);
+            } catch (err) {
+                savedTheme = null;
+            }
+
+            applyTheme(savedTheme);
+
+            toggle.addEventListener("change", function () {
+                var nextTheme = toggle.checked ? "dark" : "light";
+                root.setAttribute("data-theme", nextTheme);
+                try {
+                    localStorage.setItem(storageKey, nextTheme);
+                } catch (err) {
+                    // Ignore storage errors and keep the live theme change.
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

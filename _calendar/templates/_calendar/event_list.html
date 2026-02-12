@@ -1,0 +1,18 @@
+{% extends 'project/base.html' %}
+
+{% block title %}Event List{% endblock %}
+
+{% block content %}
+<h1>Event List</h1>
+<a href="{% url 'event_create' %}">Create New Event</a>
+<ul>
+    {% for event in events %}
+        <li>
+            <strong>{{ event.title }}</strong> - {{ event.when|date:"F j, Y, g:i a" }}
+            <br>
+            <a href="{% url 'event_update' event.id %}">Edit</a>
+            <a href="{% url 'event_delete' event.id %}">Delete</a>
+        </li>
+    {% endfor %}
+</ul>
+{% endblock %}

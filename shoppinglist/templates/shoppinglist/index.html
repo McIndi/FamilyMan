@@ -1,0 +1,69 @@
+{% extends 'project/base.html' %}
+
+{% block title %}Shopping List{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between;">
+    <section style="width: 48%;">
+        <h2>Need</h2>
+        {% for item in need_items %}
+            <p>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>
+                        <form method="post" action="{% url 'item_update' item.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="obtained" value="true">
+                            <input type="hidden" name="text" value="{{ item.text }}">
+                            <input type="hidden" name="kind" value="{{ item.kind }}">
+                            <input type="checkbox" onchange="this.form.submit()">
+                        </form>
+                        <strong>{{ item.text }}</strong>
+                    </span>
+                    <span>
+                        <a href="{% url 'item_update' item.id %}">✏️</a>
+                        <a href="{% url 'item_delete' item.id %}">❌</a>
+                    </span>
+                </div>
+            </p>
+        {% endfor %}
+        <form method="post" action="{% url 'item_create' %}">
+            {% csrf_token %}
+            <input type="hidden" name="kind" value="need">
+            <label for="text-need">New Item:</label>
+            <input type="text" id="text-need" name="text" required>
+            <button type="submit">Add</button>
+        </form>
+    </section>
+    <section style="width: 48%;">
+        <h2>Want</h2>
+        {% for item in want_items %}
+            <p>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>
+                        <form method="post" action="{% url 'item_update' item.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="obtained" value="true">
+                            <input type="hidden" name="text" value="{{ item.text }}">
+                            <input type="hidden" name="kind" value="{{ item.kind }}">
+                            <input type="checkbox" onchange="this.form.submit()">
+                        </form>
+                        <strong>{{ item.text }}</strong>
+                    </span>
+                    <span>
+                        <a href="{% url 'item_update' item.id %}">✏️</a>
+                        <a href="{% url 'item_delete' item.id %}">❌</a>
+                    </span>
+                </div>
+            </p>
+        {% endfor %}
+        <form method="post" action="{% url 'item_create' %}">
+            {% csrf_token %}
+            <input type="hidden" name="kind" value="want">
+            <label for="text-want">New Item:</label>
+            <input type="text" id="text-want" name="text" required>
+            <button type="submit">Add</button>
+        </form>
+    </section>
+</div>
+<a href="{% url 'past_items' %}" style="margin-top: 20px; display: inline-block;">View Past Items</a>
+{% endblock %}

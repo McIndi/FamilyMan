@@ -1,0 +1,81 @@
+{% extends 'project/base.html' %}
+{% load date_range %}
+{% load range_filter %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static '_calendar/css/calendar_styles.css' %}">
+<style>
+    .week-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(200px, 1fr)); /* Ensure consistent size */
+        gap: 1px;
+    }
+    .week-cell {
+        border: 1px solid #ccc;
+        padding: 10px;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block title %}Week View{% endblock %}
+
+{% block content %}
+<h1>Week View: {{ start_date|date:"F j, Y" }} - {{ end_date|date:"F j, Y" }}</h1>
+<a href="{% url 'day_view' start_date.year start_date.month start_date.day %}">Day View</a> |
+<a href="{% url 'month_view' start_date.year start_date.month %}">Month View</a>
+<br>
+<a href="{% url 'week_view' previous_date.year previous_date.month previous_date.day %}">Previous</a> |
+<a href="{% url 'week_view' next_date.year next_date.month next_date.day %}">Next</a>
+
+<div class="week-grid">
+    {% for day in week_dates %}
+        <div class="week-cell">
+            <h3><a href="{% url 'day_view' day.year day.month day.day %}">{{ day|date:"l, F j" }}</a></h3>
+            <button class="toggle-form green-plus" data-day="{{ day|date:'Y-m-d' }}">➕</button>
+            <form class="hidden-form" data-day="{{ day|date:'Y-m-d' }}" style="display: none;" method="post" action="{% url 'event_create' %}">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <input type="hidden" name="date" value="{{ day|date:'Y-m-d' }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit">Create</button>
+            </form>
+            <ul>
+                {% for event, occurrence in events %}
+                    {% if occurrence|date:"Y-m-d" == day|date:"Y-m-d" %}
+                        <li>
+                            <strong>{{ event.title }}</strong> - {{ occurrence|time:"g:i a" }} ({{ event.duration }})
+                            <br>
+                            Host: {{ event.host }}
+                            <a href="{% url 'event_update' event.id %}">✏️</a>
+                            <a href="{% url 'event_delete' event.id %}">❌</a>
+                        </li>
+                    {% endif %}
+                {% empty %}
+                    <li>No events for this day.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endfor %}
+</div>
+
+<script>
+    document.querySelectorAll('.toggle-form').forEach(button => {
+        button.addEventListener('click', () => {
+            const day = button.getAttribute('data-day');
+            const form = document.querySelector(`.hidden-form[data-day="${day}"]`);
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+
+            // Toggle the icon between + and -
+            button.textContent = form.style.display === 'none' ? '➕' : '➖';
+
+            // Prepopulate the "when" field
+            const whenField = form.querySelector('input[name="when"]');
+            if (whenField) {
+                whenField.value = `${day} 09:00`;
+            }
+        });
+    });
+</script>
+{% endblock %}

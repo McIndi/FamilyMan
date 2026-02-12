@@ -1,0 +1,10 @@
+django
+htmx-django  # HTMX integration for Django
+django-crispy-forms  # For better form rendering
+django-environ  # For environment variable management
+djangorestframework  # For APIs
+django-allauth  # For user authentication and social login
+django-debug-toolbar  # For debugging during development
+django-extensions  # Useful extensions for Django
+django-filter  # For filtering in DRF
+Pillow  # For image processing (e.g., for receipt uploads)

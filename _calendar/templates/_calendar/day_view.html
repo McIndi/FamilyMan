@@ -1,0 +1,83 @@
+{% extends 'project/base.html' %}
+{% load date_range %}
+{% load range_filter %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static '_calendar/css/calendar_styles.css' %}">
+<style>
+    .day-grid {
+        display: grid;
+        grid-template-columns: repeat(24, minmax(175px, 1fr)); /* Ensure consistent size */
+        gap: 1px;
+    }
+    .day-cell {
+        border: 1px solid #ccc;
+        padding: 10px;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block title %}Day View{% endblock %}
+
+{% block content %}
+<h1>Day View: {{ date|date:"F j, Y" }}</h1>
+<a href="{% url 'week_view' date.year date.month date.day %}">Week View</a> |
+<a href="{% url 'month_view' date.year date.month %}">Month View</a>
+<br>
+<a href="{% url 'day_view' previous_date.year previous_date.month previous_date.day %}">Previous</a> |
+<a href="{% url 'day_view' next_date.year next_date.month next_date.day %}">Next</a>
+
+<div class="day-grid">
+    {% for hour in 24|range_filter %}
+        <div class="day-cell">
+            <h4>{{ hour }}:00</h4>
+            <button class="toggle-form green-plus" data-hour="{{ hour }}">➕</button>
+            <form class="hidden-form" data-hour="{{ hour }}" style="display: none;" method="post" action="{% url 'event_create' %}">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
+                <input type="hidden" name="hour" value="{{ hour }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit">Create</button>
+            </form>
+            <ul>
+                {% for event, occurrence in events %}
+                    {% if occurrence|time:"H" == hour|stringformat:"02d" %}
+                        <li>
+                            <strong>{{ event.title }}</strong> - {{ occurrence|time:"g:i a" }} ({{ event.duration }})
+                            <br>
+                            Host: {{ event.host }}
+                            <a href="{% url 'event_update' event.id %}">✏️</a>
+                            <a href="{% url 'event_delete' event.id %}">❌</a>
+                        </li>
+                    {% endif %}
+                {% empty %}
+                    <li>No events for this hour.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endfor %}
+</div>
+
+<script>
+    document.querySelectorAll('.toggle-form').forEach(button => {
+        button.addEventListener('click', () => {
+            const hour = button.getAttribute('data-hour');
+            const date = '{{ date|date:"Y-m-d" }}';
+            const form = document.querySelector(`.hidden-form[data-hour="${hour}"]`);
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+
+            // Toggle the icon between + and -
+            button.textContent = form.style.display === 'none' ? '➕' : '➖';
+
+            // Prepopulate the "when" field
+            const whenField = form.querySelector('input[name="when"]');
+            if (whenField) {
+                whenField.value = `${date} ${hour}:00`;
+            }
+        });
+    });
+</script>
+{% endblock %}

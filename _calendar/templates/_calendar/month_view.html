@@ -1,0 +1,103 @@
+{% extends 'project/base.html' %}
+{% load static %}
+{% load date_range %}
+{% load range_filter %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static '_calendar/css/calendar_styles.css' %}">
+<style>
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        /* background-color: #ccc; */
+    }
+    .calendar-cell {
+        /* background-color: #fff; */
+        border: 1px solid #ccc;
+        padding: 10px;
+        text-align: center;
+    }
+    .calendar-header {
+        font-weight: bold;
+        background-color: #f0f0f0;
+    }
+</style>
+{% endblock %}
+
+{% block title %}Month View{% endblock %}
+
+{% block content %}
+<h1>Month View: {{ header_date|date:"F Y" }}</h1>
+<a href="{% url 'day_view' start_date.year start_date.month 1 %}">Day View</a> |
+<a href="{% url 'week_view' start_date.year start_date.month 1 %}">Week View</a>
+<br>
+<a href="{% url 'month_view' previous_date.year previous_date.month %}">Previous</a> |
+<a href="{% url 'month_view' next_date.year next_date.month %}">Next</a>
+
+<div class="calendar-grid">
+    <!-- Header row for days of the week -->
+    <div class="calendar-cell calendar-header">Sunday</div>
+    <div class="calendar-cell calendar-header">Monday</div>
+    <div class="calendar-cell calendar-header">Tuesday</div>
+    <div class="calendar-cell calendar-header">Wednesday</div>
+    <div class="calendar-cell calendar-header">Thursday</div>
+    <div class="calendar-cell calendar-header">Friday</div>
+    <div class="calendar-cell calendar-header">Saturday</div>
+
+    <!-- Days of the month -->
+    {% for week in month_dates %}
+        {% for day in week %}
+            <div class="calendar-cell">
+                {% if day %}
+                    <h3><a href="{% url 'week_view' day.year day.month day.day %}">{{ day|date:"j" }}</a></h3>
+                    <button class="toggle-form green-plus" data-day="{{ day|date:'Y-m-d' }}">
+                        ➕
+                    </button>
+                    <form class="hidden-form" data-day="{{ day|date:'Y-m-d' }}" style="display: none;" method="post" action="{% url 'event_create' %}">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <input type="hidden" name="date" value="{{ day|date:'Y-m-d' }}">
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit">Create</button>
+                    </form>
+                    <ul>
+                        {% for event, occurrence in events %}
+                            {% if occurrence|date:"Y-m-d" == day|date:"Y-m-d" %}
+                                <li>
+                                    <strong>{{ event.title }}</strong> - {{ occurrence|time:"g:i a" }} ({{ event.duration }})
+                                    <br>
+                                    Host: {{ event.host }}
+                                    <a href="{% url 'event_update' event.id %}">✏️</a>
+                                    <a href="{% url 'event_delete' event.id %}">❌</a>
+                                </li>
+                            {% endif %}
+                        {% empty %}
+                            <li>No events for this day.</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% endfor %}
+</div>
+
+<script>
+    document.querySelectorAll('.toggle-form').forEach(button => {
+        button.addEventListener('click', () => {
+            const day = button.getAttribute('data-day');
+            const form = document.querySelector(`.hidden-form[data-day="${day}"]`);
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+
+            // Toggle the icon between + and -
+            button.textContent = form.style.display === 'none' ? '➕' : '➖';
+
+            // Prepopulate the "when" field
+            const whenField = form.querySelector('input[name="when"]');
+            if (whenField) {
+                whenField.value = `${day} 09:00`;
+            }
+        });
+    });
+</script>
+{% endblock %}

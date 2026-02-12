@@ -1,0 +1,16 @@
+{% extends 'project/base.html' %}
+{% block content %}
+<h1>Delete Expense</h1>
+<p>Are you sure you want to delete this expense?</p>
+<ul>
+    <li>Amount: ${{ expense.amount }}</li>
+    <li>Category: {{ expense.category }}</li>
+    <li>Note: {{ expense.note }}</li>
+    <li>Date: {{ expense.date|date:"M d, Y H:i" }}</li>
+</ul>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Delete</button>
+    <a href="{% url 'cash_transaction_list' %}">Cancel</a>
+</form>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends 'project/base.html' %}
+
+{% block title %}Past Items{% endblock %}
+
+{% block content %}
+<h1>Past Items</h1>
+<ul>
+    {% for item in obtained_items %}
+        <li>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span><strong>{{ item.text }}</strong> <em>({{ item.kind }})</em></span>
+                <span>
+                    <a href="{% url 'item_update' item.id %}">✏️</a>
+                    <a href="{% url 'item_delete' item.id %}">❌</a>
+                </span>
+            </div>
+            <br>
+            <small>Created: {{ item.created|date:"F j, Y, g:i a" }}</small>
+            <br>
+            <small>Last Modified: {{ item.modified|date:"F j, Y, g:i a" }}</small>
+        </li>
+    {% endfor %}
+</ul>
+<a href="{% url 'item_list' %}">Back to Current Items</a>
+{% endblock %}

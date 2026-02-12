@@ -1,0 +1,45 @@
+{% extends 'project/base.html' %}
+
+{% block extra_head %}
+    <title>Message Detail - {{ message.subject }}</title>
+    <style>
+        .buttonLink {
+            background: var(--primary);
+            color: var(--text-color);
+            border: 1px solid var(--primary);
+            border-radius: var(--border-radius);
+            box-shadow: var(--button-box-shadow);
+            display: inline-block;
+            padding: 0.5em 1em;
+            margin: 0.25em;
+            text-decoration: none;
+            border-radius: var(--border-radius);
+            width: 100%;
+            text-align: center;
+
+        }
+        .buttonLink:hover {
+        background: var(--primary-hover);
+        }
+        .buttonLink-danger {
+        background: var(--background-color);
+        border: 1px solid var(--del-color);
+        }
+        .buttonLink-danger:hover {
+        background: var(--del-hover-color);
+        }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>{{ message.subject }}</h1>
+<p><strong>From:</strong> {{ message.sender.username }}</p>
+<p><strong>To:</strong> {% for recipient in recipients %}{{ recipient.recipient.username }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+<p><strong>Sent:</strong> {{ message.sent_at|date:"M d, Y H:i" }}</p>
+<hr>
+<p>{{ message.body }}</p>
+<a class="buttonLink" href="{% url 'reply_message' message.id %}">Reply</a>
+<a class="buttonLink" href="{% url 'edit_message' message.id %}">Edit</a>
+<a class="buttonLink buttonLink-danger" href="{% url 'confirm_delete_message' message.id %}">Delete Message</a>
+<a class="buttonLink" href="{% url 'inbox' %}">Back to Inbox</a>
+{% endblock %}
