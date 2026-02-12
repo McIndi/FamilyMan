@@ -6,6 +6,7 @@ from django.dispatch import receiver
 # Create your models here.
 
 class Message(models.Model):
+    family = models.ForeignKey('project.Family', on_delete=models.CASCADE, related_name='messages')
     subject = models.CharField(max_length=255)
     body = models.TextField()
     sender = models.ForeignKey(

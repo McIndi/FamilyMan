@@ -38,8 +38,9 @@ def download_shopping_list(request):
     kind = request.GET.getlist('kind')
     if not kind:
         kind = ['need', 'want']
-    needs = Item.objects.filter(kind='need', obtained=False) if 'need' in kind else []
-    wants = Item.objects.filter(kind='want', obtained=False) if 'want' in kind else []
+    family = request.current_family
+    needs = Item.objects.filter(kind='need', obtained=False, family=family) if 'need' in kind and family else []
+    wants = Item.objects.filter(kind='want', obtained=False, family=family) if 'want' in kind and family else []
 
     lines = []
     if 'need' in kind:
@@ -70,8 +71,9 @@ def item_list(request):
     - **URL**: /shoppinglist/items/
     - **Permissions**: Requires `shoppinglist.view_item` permission.
     """
-    need_items = Item.objects.filter(kind='need', obtained=False)  # Fetch unobtained items with kind 'need'.
-    want_items = Item.objects.filter(kind='want', obtained=False)  # Fetch unobtained items with kind 'want'.
+    family = request.current_family
+    need_items = Item.objects.filter(kind='need', obtained=False, family=family) if family else []
+    want_items = Item.objects.filter(kind='want', obtained=False, family=family) if family else []
     return render(request, 'shoppinglist/index.html', {'need_items': need_items, 'want_items': want_items})
 
 @login_required
@@ -84,13 +86,16 @@ def item_create(request):
     - **URL**: /shoppinglist/create/
     - **Permissions**: Requires `shoppinglist.add_item` permission.
     """
+    family = request.current_family
     if request.method == 'POST':
-        form = ItemForm(request.POST)  # Bind form data from the POST request.
-        if form.is_valid():
-            form.save()  # Save the new item to the database.
-            return redirect('item_list')  # Redirect to the item list view.
+        form = ItemForm(request.POST)
+        if form.is_valid() and family:
+            item = form.save(commit=False)
+            item.family = family
+            item.save()
+            return redirect('item_list')
     else:
-        form = ItemForm()  # Create an empty form for GET requests.
+        form = ItemForm()
     return render(request, 'shoppinglist/item_form.html', {'form': form})
 
 @login_required
@@ -103,15 +108,17 @@ def item_update(request, pk):
     - **URL**: /shoppinglist/<int:pk>/update/
     - **Permissions**: Requires `shoppinglist.change_item` permission.
     """
-    item = get_object_or_404(Item, pk=pk)  # Fetch the item or return a 404 error.
-
+    family = request.current_family
+    item = get_object_or_404(Item, pk=pk, family=family) if family else None
+    if not item:
+        return HttpResponseBadRequest("Invalid item or family context.")
     if request.method == 'POST':
-        form = ItemForm(request.POST, instance=item)  # Bind form data to the existing item.
+        form = ItemForm(request.POST, instance=item)
         if form.is_valid():
-            form.save()  # Save the updated item to the database.
-            return redirect('item_list')  # Redirect to the item list view.
+            form.save()
+            return redirect('item_list')
     else:
-        form = ItemForm(instance=item)  # Pre-fill the form with the item's data.
+        form = ItemForm(instance=item)
     return render(request, 'shoppinglist/item_form.html', {'form': form})
 
 @login_required
@@ -124,11 +131,13 @@ def item_delete(request, pk):
     - **URL**: /shoppinglist/<int:pk>/delete/
     - **Permissions**: Requires `shoppinglist.delete_item` permission.
     """
-    item = get_object_or_404(Item, pk=pk)  # Fetch the item or return a 404 error.
-
+    family = request.current_family
+    item = get_object_or_404(Item, pk=pk, family=family) if family else None
+    if not item:
+        return HttpResponseBadRequest("Invalid item or family context.")
     if request.method == 'POST':
-        item.delete()  # Delete the item from the database.
-        return redirect('item_list')  # Redirect to the item list view.
+        item.delete()
+        return redirect('item_list')
     return render(request, 'shoppinglist/item_confirm_delete.html', {'item': item})
 
 # @login_required
@@ -154,7 +163,8 @@ def past_items(request):
     - **URL**: /shoppinglist/past-items/
     - **Permissions**: Requires `shoppinglist.view_item` permission.
     """
-    obtained_items = Item.objects.filter(obtained=True)  # Fetch items that have been obtained.
+    family = request.current_family
+    obtained_items = Item.objects.filter(obtained=True, family=family) if family else []
     return render(request, 'shoppinglist/past_items.html', {'obtained_items': obtained_items})
 
 class ItemViewSet(ModelViewSet):
@@ -164,8 +174,19 @@ class ItemViewSet(ModelViewSet):
     - **Permissions**: Requires authentication.
     - **Filterable Fields**: `kind`
     """
-    queryset = Item.objects.all()  # Define the queryset for the API.
-    serializer_class = ItemSerializer  # Specify the serializer for the API.
+    serializer_class = ItemSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['kind']  # Allow filtering by 'kind'
-    permission_classes = [IsAuthenticated]  # Restrict access to authenticated users
+    filterset_fields = ['kind']
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        family = self.request.current_family
+        if family:
+            return Item.objects.filter(family=family)
+        return Item.objects.none()
+
+    def perform_create(self, serializer):
+        family = self.request.current_family
+        if not family:
+            raise PermissionDenied("No family context set.")
+        serializer.save(family=family)

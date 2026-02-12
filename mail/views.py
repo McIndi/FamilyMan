@@ -10,7 +10,8 @@ from django.urls import reverse
 
 @login_required
 def inbox(request):
-    received_messages = Recipient.objects.filter(recipient=request.user).select_related('message').order_by('-message__sent_at')
+    family = request.current_family
+    received_messages = Recipient.objects.filter(recipient=request.user, message__family=family).select_related('message').order_by('-message__sent_at') if family else Recipient.objects.none()
     paginator = Paginator(received_messages, 10)  # Show 10 messages per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -21,7 +22,10 @@ def inbox(request):
 
 @login_required
 def message_detail(request, pk):
-    recipient = get_object_or_404(Recipient, message__id=pk, recipient=request.user)
+    family = request.current_family
+    recipient = get_object_or_404(Recipient, message__id=pk, recipient=request.user, message__family=family) if family else None
+    if not recipient:
+        return HttpResponseForbidden("Invalid message or family context.")
     if not recipient.read_at:
         recipient.read_at = timezone.now()
         recipient.save()
@@ -33,11 +37,13 @@ def message_detail(request, pk):
 
 @login_required
 def compose_message(request):
+    family = request.current_family
     if request.method == 'POST':
         form = MessageForm(request.POST)
-        if form.is_valid():
+        if form.is_valid() and family:
             message = form.save(commit=False)
             message.sender = request.user
+            message.family = family
             message.save()
             recipients = form.cleaned_data['recipients']
             for recipient in recipients:
@@ -52,7 +58,10 @@ def compose_message(request):
 
 @login_required
 def delete_message(request, pk):
-    message = get_object_or_404(Message, id=pk)
+    family = request.current_family
+    message = get_object_or_404(Message, id=pk, family=family) if family else None
+    if not message:
+        return HttpResponseForbidden("Invalid message or family context.")
 
     if message.sender == request.user:
         # If the sender is deleting the message, delete the message and all recipients

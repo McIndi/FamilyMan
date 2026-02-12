@@ -30,16 +30,18 @@ def event_create(request):
     - **URL**: /calendar/create/
     - **Permissions**: Requires `calendar.add_event` permission.
     """
+    family = request.current_family
     if request.method == 'POST':
         form = EventForm(request.POST)
-        if form.is_valid():
+        if form.is_valid() and family:
             event = form.save(commit=False)
-            event.host = request.user  # Automatically assign the logged-in user as the host
+            event.host = request.user
+            event.family = family
             event.save()
-            form.save_m2m()  # Save many-to-many relationships
-            next_url = request.POST.get('next')  # Check for the 'next' field
+            form.save_m2m()
+            next_url = request.POST.get('next')
             if next_url:
-                return redirect(next_url)  # Redirect to the 'next' URL if present
+                return redirect(next_url)
             return redirect('week_view', year=event.when.year, month=event.when.month, day=event.when.day)
     else:
         form = EventForm()
@@ -55,7 +57,10 @@ def event_update(request, pk):
     - **URL**: /calendar/<int:pk>/update/
     - **Permissions**: Requires `calendar.change_event` permission.
     """
-    event = get_object_or_404(Event, pk=pk)
+    family = request.current_family
+    event = get_object_or_404(Event, pk=pk, family=family) if family else None
+    if not event:
+        return HttpResponseBadRequest("Invalid event or family context.")
     if request.method == 'POST':
         form = EventForm(request.POST, instance=event)
         if form.is_valid():
@@ -75,7 +80,10 @@ def event_delete(request, pk):
     - **URL**: /calendar/<int:pk>/delete/
     - **Permissions**: Requires `calendar.delete_event` permission.
     """
-    event = get_object_or_404(Event, pk=pk)
+    family = request.current_family
+    event = get_object_or_404(Event, pk=pk, family=family) if family else None
+    if not event:
+        return HttpResponseBadRequest("Invalid event or family context.")
     if request.method == 'POST':
         event.delete()
         return redirect('week_view', year=event.when.year, month=event.when.month, day=event.when.day)
@@ -94,7 +102,8 @@ def day_view(request, year, month, day):
     date = make_aware(datetime(year, month, day))
     start_date = date
     end_date = date + timedelta(days=1) - timedelta(seconds=1)
-    occurrences = Event.get_occurrences_in_range(start_date, end_date)
+    family = request.current_family
+    occurrences = Event.get_occurrences_in_range(start_date, end_date, family=family) if family else []
     previous_date = date - timedelta(days=1)
     next_date = date + timedelta(days=1)
     form = EventForm()  # Add a single form instance
@@ -118,7 +127,8 @@ def week_view(request, year, month, day):
     """
     start_date = make_aware(datetime(year, month, day))
     end_date = start_date + timedelta(days=6, hours=23, minutes=59, seconds=59)
-    occurrences = Event.get_occurrences_in_range(start_date, end_date)
+    family = request.current_family
+    occurrences = Event.get_occurrences_in_range(start_date, end_date, family=family) if family else []
     week_dates = [start_date + timedelta(days=i) for i in range(7)]
     previous_date = start_date - timedelta(days=7)
     next_date = start_date + timedelta(days=7)
@@ -146,7 +156,8 @@ def month_view(request, year, month):
     start_date = make_aware(datetime(year, month, 1))
     next_month = start_date + timedelta(days=31)
     end_date = make_aware(datetime(next_month.year, next_month.month, 1)) - timedelta(seconds=1)
-    occurrences = Event.get_occurrences_in_range(start_date, end_date)
+    family = request.current_family
+    occurrences = Event.get_occurrences_in_range(start_date, end_date, family=family) if family else []
 
     # Pass the actual month being viewed for the header
     header_date = make_aware(datetime(year, month, 1))
@@ -193,9 +204,17 @@ class EventViewSet(ModelViewSet):
         - `PUT`: Update an existing event.
         - `DELETE`: Delete an event.
     """
-    queryset = Event.objects.all()
     serializer_class = EventSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        family = self.request.current_family
+        if family:
+            return Event.objects.filter(family=family)
+        return Event.objects.none()
+
     def perform_create(self, serializer):
-        serializer.save(host=self.request.user)  # Automatically assign the logged-in user as the host
+        family = self.request.current_family
+        if not family:
+            raise PermissionDenied("No family context set.")
+        serializer.save(host=self.request.user, family=family)

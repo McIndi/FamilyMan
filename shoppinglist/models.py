@@ -15,6 +15,7 @@ class Item(models.Model):
         ('need', 'Need'),
         ('want', 'Want'),
     ]
+    family = models.ForeignKey('project.Family', on_delete=models.CASCADE, related_name='shopping_items')
     text = models.CharField(max_length=255)
     kind = models.CharField(max_length=4, choices=KIND_CHOICES)
     obtained = models.BooleanField(default=False, help_text="Indicates whether the item has been obtained.")

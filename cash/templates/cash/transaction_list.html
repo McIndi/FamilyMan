@@ -2,7 +2,7 @@
 {% block content %}
 <h1>Cash Transactions</h1>
 <div style="margin-bottom: 1em;">
-    <strong>Family Cash Total:</strong> <span style="font-size:1.2em;">${{ family_cash|floatformat:2 }}</span>
+    <h2><strong>Total Available Funds:</strong> <span style="font-size:1.2em;">${{ family_cash|floatformat:2 }}</span><h2>
 </div>
 <form method="get" style="margin-bottom: 1em;">
     <label>Period:
@@ -28,18 +28,6 @@
     <a class="buttonLink" href="{% url 'add_fund' %}">Add Funds</a>
     <a class="buttonLink" href="{% url 'add_expense' %}">Record Expense</a>
 </div>
-<h2>Funds</h2>
-<ul>
-    {% for fund in funds %}
-        <li>
-            {{ fund.date|date:"M d, Y H:i" }}: <strong>+${{ fund.amount }}</strong> {% if fund.note %}({{ fund.note }}){% endif %}
-            <a href="{% url 'edit_fund' fund.id %}">Edit</a> |
-            <a href="{% url 'delete_fund' fund.id %}">Delete</a>
-        </li>
-    {% empty %}
-        <li>No funds added in this period.</li>
-    {% endfor %}
-</ul>
 <h2>Expenses</h2>
 <ul>
     {% for expense in expenses %}
@@ -57,6 +45,18 @@
         </li>
     {% empty %}
         <li>No expenses recorded in this period.</li>
+    {% endfor %}
+</ul>
+<h2>Income</h2>
+<ul>
+    {% for fund in funds %}
+        <li>
+            {{ fund.date|date:"M d, Y H:i" }}: <strong>+${{ fund.amount }}</strong> {% if fund.note %}({{ fund.note }}){% endif %}
+            <a href="{% url 'edit_fund' fund.id %}">Edit</a> |
+            <a href="{% url 'delete_fund' fund.id %}">Delete</a>
+        </li>
+    {% empty %}
+        <li>No funds added in this period.</li>
     {% endfor %}
 </ul>
 {% endblock %}

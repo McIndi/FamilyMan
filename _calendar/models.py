@@ -13,6 +13,7 @@ class Event(models.Model):
         ('annually', 'Annually'),
     ]
 
+    family = models.ForeignKey('project.Family', on_delete=models.CASCADE, related_name='events')
     title = models.CharField(max_length=255)
     text = models.TextField()
     when = models.DateTimeField()
@@ -24,9 +25,12 @@ class Event(models.Model):
     def __str__(self):
         return self.title
 
-    def upcoming(self, count=4):
+    def upcoming(self, count=4, family=None):
         from django.utils.timezone import now
         from datetime import timedelta
+
+        if family and self.family_id != family.id:
+            return []
 
         upcoming_occurrences = []
         if self.repeat == 'false':
@@ -51,10 +55,12 @@ class Event(models.Model):
         return sorted(upcoming_occurrences)[:count]
 
     @classmethod
-    def get_occurrences_in_range(cls, start_date, end_date):
-        events = cls.objects.all()
+    def get_occurrences_in_range(cls, start_date, end_date, family=None):
+        qs = cls.objects.all()
+        if family:
+            qs = qs.filter(family=family)
         occurrences = []
-        for event in events:
+        for event in qs:
             current_time = event.when
             while current_time <= end_date:
                 if current_time >= start_date:

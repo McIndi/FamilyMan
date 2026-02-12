@@ -13,7 +13,7 @@ class MessageForm(forms.ModelForm):
 
     class Meta:
         model = Message
-        fields = ['subject', 'body', 'recipients']
+        exclude = ['family']
         widgets = {
             'subject': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Subject'}),
             'body': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Write your message here...'}),

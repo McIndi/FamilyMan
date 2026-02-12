@@ -5,4 +5,83 @@
 {% block content %}
 <h1>Welcome to FamilyMan</h1>
 <p>Your personal family management app.</p>
+
+{% if user.is_authenticated and current_family %}
+<hr>
+<div style="display: flex; flex-wrap: wrap; gap: 2rem;">
+	<!-- Mail summary -->
+	<section style="flex: 1 1 300px; min-width: 250px;">
+		<h2>Inbox</h2>
+		<p><strong>{{ unread_mail_count }}</strong> unread messages</p>
+		<a href="{% url 'inbox' %}">Go to Inbox</a>
+	</section>
+
+	<!-- Calendar summary -->
+	<section style="flex: 1 1 300px; min-width: 250px;">
+		<h2>Upcoming Events</h2>
+		<ul>
+			{% for event, occ_time in upcoming_events|slice:":7" %}
+				<li>
+					<a href="{% url 'event_update' event.id %}">{{ event.title }}</a>
+					<span style="color: #888;">({{ occ_time|date:'M d, H:i' }})</span>
+				</li>
+			{% empty %}
+				<li>No events in the next 7 days.</li>
+			{% endfor %}
+		</ul>
+		{% if upcoming_events|length > 0 %}
+			{% with first_event=upcoming_events.0 %}
+				<a href="{% url 'week_view' year=first_event.1.year month=first_event.1.month day=first_event.1.day %}">View Calendar</a>
+			{% endwith %}
+		{% else %}
+			{% now "Y" as current_year %}
+			{% now "m" as current_month %}
+			{% now "d" as current_day %}
+			<a href="{% url 'week_view' year=current_year month=current_month day=current_day %}">View Calendar</a>
+		{% endif %}
+	</section>
+
+	<!-- Cash summary -->
+	<section style="flex: 1 1 300px; min-width: 250px;">
+		<h2>Cash Summary (Month-to-date)</h2>
+		<p>Income: <strong>${{ cash_summary.funds | floatformat:2 }}</strong></p>
+		<p>Expenses: <strong>${{ cash_summary.expenses | floatformat:2 }}</strong></p>
+		<p>Available Cash: <strong>${{ cash_summary.available | floatformat:2 }}</strong></p>
+		<a href="{% url 'cash_transaction_list' %}">View Transactions</a>
+	</section>
+
+	<!-- Shopping list summary -->
+	<section style="flex: 1 1 300px; min-width: 250px;">
+		<h2>Shopping List Needs</h2>
+		<ul>
+			{% for item in shopping_needs|slice:":5" %}
+				<li>
+					<a href="{% url 'item_update' item.id %}">{{ item.text }}</a>
+				</li>
+			{% empty %}
+				<li>No needs in your shopping list.</li>
+			{% endfor %}
+		</ul>
+		<a href="{% url 'item_list' %}">View Shopping List</a>
+	</section>
+
+	<!-- Merits summary -->
+	<section style="flex: 1 1 300px; min-width: 250px;">
+		<h2>Merits & Demerits</h2>
+		<ul>
+			{% for summary in merits_summary %}
+				<li>
+					<strong>{{ summary.child.username }}</strong>: {{ summary.total }} points
+					<span style="color: #4caf50;">(+{{ summary.merit_points }})</span>
+					<span style="color: #f44336;">(-{{ summary.demerit_points }})</span>
+				</li>
+			{% empty %}
+				<li>No children or points yet.</li>
+			{% endfor %}
+		</ul>
+		<a href="{% url 'merit_dashboard' %}">View Merits</a>
+	</section>
+</div>
+<hr>
+{% endif %}
 {% endblock %}

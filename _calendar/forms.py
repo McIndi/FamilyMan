@@ -5,7 +5,7 @@ from django.forms.widgets import DateTimeInput, Select
 class EventForm(forms.ModelForm):
     class Meta:
         model = Event
-        fields = ['title', 'text', 'when', 'attendees', 'duration', 'repeat']  # Removed 'host' from the create form
+        exclude = ['family']
         widgets = {
             'when': DateTimeInput(attrs={'type': 'datetime-local'}),
             'duration': Select(choices=[

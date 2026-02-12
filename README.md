@@ -66,6 +66,11 @@
    cp .env.example .env
    # Edit .env to set your SECRET_KEY and other settings
    ```
+   On Windows (PowerShell):
+   ```powershell
+   Copy-Item .env.example .env
+   # Edit .env to set your SECRET_KEY and other settings
+   ```
 6. Create a superuser to access the admin interface:
    ```bash
    python manage.py createsuperuser
@@ -82,6 +87,11 @@
 - Access the merits dashboard at `/merits/dashboard/`
 - Access the inbox at `/mail/inbox/`
 - Access cash tracking at `/cash/transactions/`
+
+## Development Notes
+
+- This project defaults to `DEBUG=True`, `ALLOWED_HOSTS=[]`, and the console email backend for local development.
+- A real `SECRET_KEY` is required in `.env` for any non-local deployment.
 
 ## API Endpoints
 
