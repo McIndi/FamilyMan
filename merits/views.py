@@ -2,12 +2,21 @@ import logging
 
 from django.shortcuts import render
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 
 from project.models import Membership, Family
 from merits.models import Merit, Demerit
 from merits.forms import MeritForm, DemeritForm
+
+
+def _format_form_errors(form):
+    error_messages = []
+    for field, errors in form.errors.items():
+        label = "Form" if field == "__all__" else field.replace("_", " ").capitalize()
+        error_messages.append(f"{label}: {', '.join(errors)}")
+    return " | ".join(error_messages)
 
 def merit_dashboard(request):
     """
@@ -111,12 +120,18 @@ def add_merit(request):
                         request.current_family.id,
                         form.cleaned_data['child'].id,
                     )
+                    messages.error(request, "Merit not saved. Selected child is not in the current family.")
             else:
                 log.warning(
                     "Add merit invalid form user_id=%s family_id=%s",
                     request.user.id,
                     request.current_family.id,
                 )
+                error_text = _format_form_errors(form)
+                message = "Merit not saved."
+                if error_text:
+                    message = f"{message} {error_text}"
+                messages.error(request, message)
             return redirect('merit_dashboard')
         log.info("Add merit skipped: non-POST user_id=%s", request.user.id)
         return redirect('merit_dashboard')
@@ -160,12 +175,18 @@ def add_demerit(request):
                         request.current_family.id,
                         form.cleaned_data['child'].id,
                     )
+                    messages.error(request, "Demerit not saved. Selected child is not in the current family.")
             else:
                 log.warning(
                     "Add demerit invalid form user_id=%s family_id=%s",
                     request.user.id,
                     request.current_family.id,
                 )
+                error_text = _format_form_errors(form)
+                message = "Demerit not saved."
+                if error_text:
+                    message = f"{message} {error_text}"
+                messages.error(request, message)
             return redirect('merit_dashboard')
         log.info("Add demerit skipped: non-POST user_id=%s", request.user.id)
         return redirect('merit_dashboard')
