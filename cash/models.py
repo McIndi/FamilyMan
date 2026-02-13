@@ -14,7 +14,7 @@ class Category(models.Model):
 		unique_together = ('family', 'name')
 
 	def __str__(self):
-		return f"{self.name} ({self.family.name})"
+		return f"{self.name}"
 
 
 class Fund(models.Model):
