@@ -29,34 +29,73 @@
     <a class="buttonLink" href="{% url 'add_expense' %}">Record Expense</a>
 </div>
 <h2>Expenses</h2>
-<ul>
-    {% for expense in expenses %}
-        <li>
-            {{ expense.date|date:"M d, Y H:i" }}: <strong>-${{ expense.amount }}</strong> {% if expense.category %}({{ expense.category }}){% endif %} {% if expense.note %}({{ expense.note }}){% endif %}
-            <a href="{% url 'edit_expense' expense.id %}">Edit</a> |
-            <a href="{% url 'delete_expense' expense.id %}">Delete</a>
-            {% if expense.receipts.all %}
-                <ul>
-                    {% for receipt in expense.receipts.all %}
-                        <li><a href="{{ receipt.image.url }}" target="_blank">Receipt</a> (uploaded {{ receipt.uploaded_at|date:"M d, Y H:i" }})</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        </li>
-    {% empty %}
-        <li>No expenses recorded in this period.</li>
-    {% endfor %}
-</ul>
+<table>
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Category</th>
+            <th>Note</th>
+            <th>Receipts</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for expense in expenses %}
+            <tr>
+                <td>{{ expense.date|date:"M d, Y H:i" }}</td>
+                <td><strong>-${{ expense.amount }}</strong></td>
+                <td>{% if expense.category %}{{ expense.category }}{% else %}-{% endif %}</td>
+                <td>{% if expense.note %}{{ expense.note }}{% else %}-{% endif %}</td>
+                <td>
+                    {% if expense.receipts.all %}
+                        {% for receipt in expense.receipts.all %}
+                            <a href="{{ receipt.image.url }}" target="_blank">Receipt</a>
+                            <small>(uploaded {{ receipt.uploaded_at|date:"M d, Y H:i" }})</small>
+                            {% if not forloop.last %}<br>{% endif %}
+                        {% endfor %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'edit_expense' expense.id %}">Edit</a> |
+                    <a href="{% url 'delete_expense' expense.id %}">Delete</a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="6">No expenses recorded in this period.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
 <h2>Income</h2>
-<ul>
-    {% for fund in funds %}
-        <li>
-            {{ fund.date|date:"M d, Y H:i" }}: <strong>+${{ fund.amount }}</strong> {% if fund.note %}({{ fund.note }}){% endif %}
-            <a href="{% url 'edit_fund' fund.id %}">Edit</a> |
-            <a href="{% url 'delete_fund' fund.id %}">Delete</a>
-        </li>
-    {% empty %}
-        <li>No funds added in this period.</li>
-    {% endfor %}
-</ul>
+<table>
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Note</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for fund in funds %}
+            <tr>
+                <td>{{ fund.date|date:"M d, Y H:i" }}</td>
+                <td><strong>+${{ fund.amount }}</strong></td>
+                <td>{% if fund.note %}{{ fund.note }}{% else %}-{% endif %}</td>
+                <td>
+                    <a href="{% url 'edit_fund' fund.id %}">Edit</a> |
+                    <a href="{% url 'delete_fund' fund.id %}">Delete</a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="4">No funds added in this period.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% endblock %}
