@@ -18,8 +18,8 @@ def merit_dashboard(request):
         if not request.current_family:
             log.warning("Merit dashboard blocked: no current family user_id=%s", request.user.id)
             return redirect('switch_family')  # Ensure a family is selected
-        merit_form = MeritForm()
-        demerit_form = DemeritForm()
+        merit_form = MeritForm(prefix="merit")
+        demerit_form = DemeritForm(prefix="demerit")
 
         # Check if the user is a parent in the current family
         membership = Membership.objects.filter(user=request.user, family=request.current_family, role='parent').first()
@@ -41,16 +41,16 @@ def merit_dashboard(request):
         )
         merits_by_child = {}
         for child in children:
-            merits_by_child[child.id] = [merit for merit in merits if merit.child.id == child.id]
+            merits_by_child[child.user_id] = [merit for merit in merits if merit.child_id == child.user_id]
         demerits = Demerit.objects.filter(child__families=request.current_family).select_related('child', 'creator')
         demerits_by_child = {}
         for child in children:
-            demerits_by_child[child.id] = [demerit for demerit in demerits if demerit.child.id == child.id]
+            demerits_by_child[child.user_id] = [demerit for demerit in demerits if demerit.child_id == child.user_id]
 
         score_by_child = {}
         for child in children:
-            score_by_child[child] = sum(merit.weight for merit in merits_by_child[child.id]) - sum(
-                demerit.weight for demerit in demerits_by_child[child.id]
+            score_by_child[child] = sum(merit.weight for merit in merits_by_child[child.user_id]) - sum(
+                demerit.weight for demerit in demerits_by_child[child.user_id]
             )
 
         log.info(
@@ -86,11 +86,11 @@ def add_merit(request):
             log.warning("Add merit blocked: no current family user_id=%s", request.user.id)
             return redirect('switch_family')
         if request.method == 'POST':
-            form = MeritForm(request.POST)
+            form = MeritForm(request.POST, prefix="merit")
             if form.is_valid():
                 merit = form.save(commit=False)
                 child = Membership.objects.filter(
-                    id=form.cleaned_data['child'].id,
+                    user=form.cleaned_data['child'],
                     family=request.current_family,
                     role='child'
                 ).first()
@@ -135,11 +135,11 @@ def add_demerit(request):
             log.warning("Add demerit blocked: no current family user_id=%s", request.user.id)
             return redirect('switch_family')
         if request.method == 'POST':
-            form = DemeritForm(request.POST)
+            form = DemeritForm(request.POST, prefix="demerit")
             if form.is_valid():
                 demerit = form.save(commit=False)
                 child = Membership.objects.filter(
-                    id=form.cleaned_data['child'].id,
+                    user=form.cleaned_data['child'],
                     family=request.current_family,
                     role='child'
                 ).first()

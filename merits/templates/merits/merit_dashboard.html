@@ -18,9 +18,9 @@
                 <tr>
                     <td>{{ child.user.username }}</td>
                     <td>
-                        <a href="#" class="demerit-link" data-child-id="{{ child.id }}">&#x2796;</a>
+                        <a href="#" class="demerit-link" data-child-user-id="{{ child.user.id }}">&#x2796;</a>
                         {{ score }} points
-                        <a href="#" class="merit-link" data-child-id="{{ child.id }}">&#x2795;</a>
+                        <a href="#" class="merit-link" data-child-user-id="{{ child.user.id }}">&#x2795;</a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -35,7 +35,6 @@
             <h2>Add Merit</h2>
             <form method="post" action="{% url 'add_merit' %}">
                 {% csrf_token %}
-                <input type="hidden" name="child_id" id="merit-child-id">
                 {{ merit_form.as_p }}
                 <button type="submit">Submit</button>
             </form>
@@ -48,7 +47,6 @@
             <h2>Add Demerit</h2>
             <form method="post" action="{% url 'add_demerit' %}">
                 {% csrf_token %}
-                <input type="hidden" name="child_id" id="demerit-child-id">
                 {{ demerit_form.as_p }}
                 <button type="submit">Submit</button>
             </form>
@@ -61,14 +59,16 @@
             const demeritLinks = document.querySelectorAll('.demerit-link');
             const meritModal = document.getElementById('merit-modal');
             const demeritModal = document.getElementById('demerit-modal');
-            const meritChildIdInput = document.getElementById('merit-child-id');
-            const demeritChildIdInput = document.getElementById('demerit-child-id');
+            const meritChildSelect = document.getElementById('id_merit-child');
+            const demeritChildSelect = document.getElementById('id_demerit-child');
             const closeButtons = document.querySelectorAll('.close');
 
             meritLinks.forEach(link => {
                 link.addEventListener('click', function(event) {
                     event.preventDefault();
-                    meritChildIdInput.value = this.dataset.childId;
+                    if (meritChildSelect) {
+                        meritChildSelect.value = this.dataset.childUserId;
+                    }
                     meritModal.style.display = 'block';
                 });
             });
@@ -76,7 +76,9 @@
             demeritLinks.forEach(link => {
                 link.addEventListener('click', function(event) {
                     event.preventDefault();
-                    demeritChildIdInput.value = this.dataset.childId;
+                    if (demeritChildSelect) {
+                        demeritChildSelect.value = this.dataset.childUserId;
+                    }
                     demeritModal.style.display = 'block';
                 });
             });
