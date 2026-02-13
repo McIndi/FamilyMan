@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 
 from merits.models import Merit, Demerit
 
@@ -15,6 +15,13 @@ class MeritForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
     
+    def clean_weight(self):
+        """Reject negative weight values."""
+        weight = self.cleaned_data.get('weight')
+        if weight is not None and weight < 0:
+            raise ValidationError('Weight cannot be negative.')
+        return weight
+
 class DemeritForm(forms.ModelForm):
     """
     Form for creating and updating Demerit instances.
@@ -26,3 +33,10 @@ class DemeritForm(forms.ModelForm):
             'child': forms.Select(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
+
+    def clean_weight(self):
+        """Reject negative weight values."""
+        weight = self.cleaned_data.get('weight')
+        if weight is not None and weight < 0:
+            raise ValidationError('Weight cannot be negative.')
+        return weight

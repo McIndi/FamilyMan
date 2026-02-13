@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from .models import Fund, Expense, Category, Receipt
 
 
@@ -7,11 +8,25 @@ class FundForm(forms.ModelForm):
         model = Fund
         fields = ['amount', 'note']
 
+    def clean_amount(self):
+        """Reject negative amount values."""
+        amount = self.cleaned_data.get('amount')
+        if amount is not None and amount < 0:
+            raise ValidationError('Amount cannot be negative.')
+        return amount
+
 
 class ExpenseForm(forms.ModelForm):
     class Meta:
         model = Expense
         fields = ['amount', 'category', 'note']
+
+    def clean_amount(self):
+        """Reject negative amount values."""
+        amount = self.cleaned_data.get('amount')
+        if amount is not None and amount < 0:
+            raise ValidationError('Amount cannot be negative.')
+        return amount
 
     def __init__(self, *args, **kwargs):
         family = kwargs.pop('family', None)
