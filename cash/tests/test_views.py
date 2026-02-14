@@ -1,12 +1,15 @@
 """View tests for cash app."""
 
 import io
+import json
 import tempfile
+from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 from PIL import Image
 
 from cash.models import Category, Expense, Fund, Receipt
@@ -105,3 +108,93 @@ class CashViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("family_cash", response.context)
+
+    def test_dashboard_renders_chart_data(self):
+        """Dashboard returns chart data arrays matching the days window."""
+        response = self.client.get(
+            reverse("cash_transaction_dashboard"),
+            {"days": "60", "window": "30"},
+        )
+        self.assertEqual(response.status_code, 200)
+        chart_data = json.loads(response.context["chart_data"])
+        self.assertEqual(len(chart_data["dates"]), 60)
+        self.assertEqual(len(chart_data["rolling_income"]), 60)
+        self.assertEqual(len(chart_data["rolling_expenses"]), 60)
+        self.assertEqual(len(chart_data["rolling_net"]), 60)
+
+    def test_dashboard_clamps_days_and_window(self):
+        """Dashboard clamps days and rolling window query params."""
+        response = self.client.get(
+            reverse("cash_transaction_dashboard"),
+            {"days": "5", "window": "400"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["days"], 30)
+        self.assertEqual(response.context["window"], 30)
+
+    def test_dashboard_filters_records_by_window(self):
+        """Dashboard tables show only records inside the selected window."""
+        days = 30
+        end_date = timezone.localdate()
+        start_date = end_date - timedelta(days=days - 1)
+
+        old_expense = Expense.objects.create(
+            user=self.user,
+            family=self.family,
+            amount="10.00",
+            note="Old",
+        )
+        in_range_expense = Expense.objects.create(
+            user=self.user,
+            family=self.family,
+            amount="12.00",
+            note="Current",
+        )
+
+        old_dt = timezone.make_aware(datetime.combine(start_date - timedelta(days=1), time(12, 0)))
+        in_range_dt = timezone.make_aware(datetime.combine(end_date, time(12, 0)))
+        Expense.objects.filter(id=old_expense.id).update(date=old_dt)
+        Expense.objects.filter(id=in_range_expense.id).update(date=in_range_dt)
+
+        response = self.client.get(
+            reverse("cash_transaction_dashboard"),
+            {"days": str(days)},
+        )
+        self.assertEqual(response.status_code, 200)
+        expenses = list(response.context["expenses"])
+        self.assertIn(in_range_expense, expenses)
+        self.assertNotIn(old_expense, expenses)
+
+    def test_dashboard_rolling_values_include_events(self):
+        """Rolling totals include values inside the window."""
+        days = 10
+        window = 10
+        end_date = timezone.localdate()
+        start_date = end_date - timedelta(days=days - 1)
+
+        fund_one = Fund.objects.create(user=self.user, family=self.family, amount="100.00", note="Start")
+        fund_two = Fund.objects.create(user=self.user, family=self.family, amount="50.00", note="End")
+        expense = Expense.objects.create(user=self.user, family=self.family, amount="30.00", note="Bill")
+
+        start_dt = timezone.make_aware(datetime.combine(start_date, time(12, 0)))
+        end_dt = timezone.make_aware(datetime.combine(end_date, time(12, 0)))
+        Fund.objects.filter(id=fund_one.id).update(date=start_dt)
+        Fund.objects.filter(id=fund_two.id).update(date=end_dt)
+        Expense.objects.filter(id=expense.id).update(date=start_dt)
+
+        response = self.client.get(
+            reverse("cash_transaction_dashboard"),
+            {"days": str(days), "window": str(window)},
+        )
+        self.assertEqual(response.status_code, 200)
+        chart_data = json.loads(response.context["chart_data"])
+        self.assertEqual(chart_data["rolling_income"][-1], 150.0)
+        self.assertEqual(chart_data["rolling_expenses"][-1], 30.0)
+        self.assertEqual(chart_data["rolling_net"][-1], 120.0)
+
+    def test_dashboard_redirects_without_family(self):
+        """Dashboard redirects to family switch when no family is selected."""
+        other_user = get_user_model().objects.create_user("orphan", password="Password123!")
+        self.client.force_login(other_user)
+        response = self.client.get(reverse("cash_transaction_dashboard"))
+        self.assertRedirects(response, reverse("switch_family"), target_status_code=302)

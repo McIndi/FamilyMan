@@ -1,0 +1,205 @@
+{% extends 'project/base.html' %}
+{% block content %}
+<h1>Cash Dashboard</h1>
+<div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-bottom: 1.25rem;">
+    <div>
+        <strong>Total Available Funds:</strong>
+        <span style="font-size: 1.2em;">${{ family_cash|floatformat:2 }}</span>
+    </div>
+    <div>
+        <a class="buttonLink" href="{% url 'cash_transaction_list' %}">View Full List</a>
+    </div>
+</div>
+<form method="get" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 1.25rem;">
+    <label>Days to show
+        <input type="number" name="days" min="30" max="365" value="{{ days }}">
+    </label>
+    <label>Rolling window
+        <input type="number" name="window" min="7" max="90" value="{{ window }}">
+    </label>
+    <button type="submit">Update</button>
+</form>
+<section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <article style="padding: 1rem; border: 1px solid var(--muted-border-color); border-radius: 0.5rem;">
+        <h3 style="margin-top: 0;">Rolling Income</h3>
+        <svg id="chart-income" viewBox="0 0 600 160" width="100%" height="160" role="img" aria-label="Rolling income trend"></svg>
+    </article>
+    <article style="padding: 1rem; border: 1px solid var(--muted-border-color); border-radius: 0.5rem;">
+        <h3 style="margin-top: 0;">Rolling Expenses</h3>
+        <svg id="chart-expenses" viewBox="0 0 600 160" width="100%" height="160" role="img" aria-label="Rolling expenses trend"></svg>
+    </article>
+    <article style="padding: 1rem; border: 1px solid var(--muted-border-color); border-radius: 0.5rem;">
+        <h3 style="margin-top: 0;">Rolling Net</h3>
+        <svg id="chart-net" viewBox="0 0 600 160" width="100%" height="160" role="img" aria-label="Rolling net trend"></svg>
+    </article>
+</section>
+<section style="margin-bottom: 2rem;">
+    <h2>Recent Expenses (last {{ days }} days)</h2>
+    <table data-sortable>
+        <thead>
+            <tr>
+                <th data-type="date">Date</th>
+                <th data-type="number">Amount</th>
+                <th data-type="text">Category</th>
+                <th data-type="text">Note</th>
+                <th data-type="text">Receipts</th>
+                <th data-type="text">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in expenses %}
+                <tr>
+                    <td data-value="{{ expense.date|date:'c' }}">{{ expense.date|date:"M d, Y H:i" }}</td>
+                    <td data-value="{{ expense.amount }}"><strong>-${{ expense.amount }}</strong></td>
+                    <td data-value="{% if expense.category %}{{ expense.category }}{% endif %}">{% if expense.category %}{{ expense.category }}{% else %}-{% endif %}</td>
+                    <td data-value="{% if expense.note %}{{ expense.note }}{% endif %}">{% if expense.note %}{{ expense.note }}{% else %}-{% endif %}</td>
+                    <td>
+                        {% if expense.receipts.all %}
+                            {% for receipt in expense.receipts.all %}
+                                <a href="{{ receipt.image.url }}" target="_blank">Receipt</a>
+                                <small>(uploaded {{ receipt.uploaded_at|date:"M d, Y H:i" }})</small>
+                                {% if not forloop.last %}<br>{% endif %}
+                            {% endfor %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'edit_expense' expense.id %}">Edit</a> |
+                        <a href="{% url 'delete_expense' expense.id %}">Delete</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6">No expenses recorded in this window.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+<section>
+    <h2>Recent Income (last {{ days }} days)</h2>
+    <table data-sortable>
+        <thead>
+            <tr>
+                <th data-type="date">Date</th>
+                <th data-type="number">Amount</th>
+                <th data-type="text">Note</th>
+                <th data-type="text">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fund in funds %}
+                <tr>
+                    <td data-value="{{ fund.date|date:'c' }}">{{ fund.date|date:"M d, Y H:i" }}</td>
+                    <td data-value="{{ fund.amount }}"><strong>+${{ fund.amount }}</strong></td>
+                    <td data-value="{% if fund.note %}{{ fund.note }}{% endif %}">{% if fund.note %}{{ fund.note }}{% else %}-{% endif %}</td>
+                    <td>
+                        <a href="{% url 'edit_fund' fund.id %}">Edit</a> |
+                        <a href="{% url 'delete_fund' fund.id %}">Delete</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4">No funds recorded in this window.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+<script>
+    (function () {
+        var chartData = {{ chart_data|safe }};
+
+        function buildPath(values, width, height, padding) {
+            var maxVal = Math.max.apply(null, values);
+            var minVal = Math.min.apply(null, values);
+            if (maxVal === minVal) {
+                maxVal += 1;
+                minVal = Math.max(0, minVal - 1);
+            }
+            var innerWidth = width - padding * 2;
+            var innerHeight = height - padding * 2;
+            return values.map(function (value, index) {
+                var x = padding + (innerWidth * index) / Math.max(values.length - 1, 1);
+                var y = padding + innerHeight - ((value - minVal) / (maxVal - minVal)) * innerHeight;
+                return x.toFixed(1) + "," + y.toFixed(1);
+            }).join(" ");
+        }
+
+        function renderLine(svgId, values, color) {
+            var svg = document.getElementById(svgId);
+            if (!svg) {
+                return;
+            }
+            var width = 600;
+            var height = 160;
+            var padding = 16;
+
+            while (svg.firstChild) {
+                svg.removeChild(svg.firstChild);
+            }
+
+            var polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+            polyline.setAttribute("fill", "none");
+            polyline.setAttribute("stroke", color);
+            polyline.setAttribute("stroke-width", "2.5");
+            polyline.setAttribute("points", buildPath(values, width, height, padding));
+            svg.appendChild(polyline);
+        }
+
+        renderLine("chart-income", chartData.rolling_income, "#198754");
+        renderLine("chart-expenses", chartData.rolling_expenses, "#d6336c");
+        renderLine("chart-net", chartData.rolling_net, "#0d6efd");
+
+        function parseValue(cell, type) {
+            var raw = cell.getAttribute("data-value") || cell.textContent || "";
+            if (type === "number") {
+                var num = parseFloat(raw.replace(/[^0-9.-]+/g, ""));
+                return isNaN(num) ? 0 : num;
+            }
+            if (type === "date") {
+                var time = Date.parse(raw);
+                return isNaN(time) ? 0 : time;
+            }
+            return raw.toLowerCase();
+        }
+
+        function sortTable(table, index, type, direction) {
+            var tbody = table.tBodies[0];
+            var rows = Array.prototype.slice.call(tbody.rows, 0);
+            rows.sort(function (a, b) {
+                var aValue = parseValue(a.cells[index], type);
+                var bValue = parseValue(b.cells[index], type);
+                if (aValue < bValue) {
+                    return direction === "asc" ? -1 : 1;
+                }
+                if (aValue > bValue) {
+                    return direction === "asc" ? 1 : -1;
+                }
+                return 0;
+            });
+            rows.forEach(function (row) {
+                tbody.appendChild(row);
+            });
+        }
+
+        document.querySelectorAll("table[data-sortable]").forEach(function (table) {
+            var headers = table.querySelectorAll("thead th");
+            headers.forEach(function (header, index) {
+                header.style.cursor = "pointer";
+                header.addEventListener("click", function () {
+                    var type = header.getAttribute("data-type") || "text";
+                    var current = header.getAttribute("data-sort") || "desc";
+                    var next = current === "asc" ? "desc" : "asc";
+                    headers.forEach(function (item) {
+                        item.removeAttribute("data-sort");
+                    });
+                    header.setAttribute("data-sort", next);
+                    sortTable(table, index, type, next);
+                });
+            });
+        });
+    })();
+</script>
+{% endblock %}

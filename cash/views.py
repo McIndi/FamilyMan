@@ -1,8 +1,11 @@
 import logging
+import json
+from collections import deque
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Sum
+from django.db.models.functions import TruncDate
 from .models import Fund, Expense, Category, Receipt
 from .forms import FundForm, ExpenseForm, ReceiptForm, CategoryForm
 from django.utils import timezone
@@ -295,4 +298,105 @@ def cash_transaction_list(request):
 		})
 	except Exception:
 		log.exception("Unhandled error in cash_transaction_list user_id=%s", request.user.id)
+		raise
+
+
+@login_required
+def cash_transaction_dashboard(request):
+	log = logging.getLogger(__name__)
+	try:
+		current_family = getattr(request, 'current_family', None)
+		if not current_family:
+			log.warning("Transaction dashboard blocked: no current family user_id=%s", request.user.id)
+			return redirect('switch_family')
+
+		def clamp_int(value, default, minimum, maximum):
+			try:
+				parsed = int(value)
+			except (TypeError, ValueError):
+				return default
+			return max(minimum, min(parsed, maximum))
+
+		days = clamp_int(request.GET.get('days'), 120, 30, 365)
+		window = clamp_int(request.GET.get('window'), 30, 7, min(90, days))
+
+		end_date = timezone.localdate()
+		start_date = end_date - timedelta(days=days - 1)
+		dates = [start_date + timedelta(days=offset) for offset in range(days)]
+
+		funds_range = Fund.objects.filter(
+			family=current_family,
+			date__date__gte=start_date,
+			date__date__lte=end_date,
+		).select_related('user')
+		expenses_range = Expense.objects.filter(
+			family=current_family,
+			date__date__gte=start_date,
+			date__date__lte=end_date,
+		).select_related('user', 'category').prefetch_related('receipts')
+
+		funds_by_day = {
+			row['day']: row['total']
+			for row in funds_range.annotate(day=TruncDate('date'))
+				.values('day')
+				.annotate(total=Sum('amount'))
+				.order_by('day')
+		}
+		expenses_by_day = {
+			row['day']: row['total']
+			for row in expenses_range.annotate(day=TruncDate('date'))
+				.values('day')
+				.annotate(total=Sum('amount'))
+				.order_by('day')
+		}
+
+		daily_income = [float(funds_by_day.get(day, 0) or 0) for day in dates]
+		daily_expenses = [float(expenses_by_day.get(day, 0) or 0) for day in dates]
+
+		def rolling_sum(values, window_size):
+			running = 0.0
+			queue = deque()
+			result = []
+			for value in values:
+				queue.append(value)
+				running += value
+				if len(queue) > window_size:
+					running -= queue.popleft()
+				result.append(running)
+			return result
+
+		rolling_income = rolling_sum(daily_income, window)
+		rolling_expenses = rolling_sum(daily_expenses, window)
+		rolling_net = [inc - exp for inc, exp in zip(rolling_income, rolling_expenses)]
+
+		cash_total = Fund.objects.filter(family=current_family).aggregate(total=Sum('amount'))['total'] or 0
+		expense_total = Expense.objects.filter(family=current_family).aggregate(total=Sum('amount'))['total'] or 0
+		family_cash = cash_total - expense_total
+
+		chart_data = json.dumps({
+			'dates': [day.isoformat() for day in dates],
+			'daily_income': daily_income,
+			'daily_expenses': daily_expenses,
+			'rolling_income': rolling_income,
+			'rolling_expenses': rolling_expenses,
+			'rolling_net': rolling_net,
+		})
+
+		log.debug(
+			"Transaction dashboard data user_id=%s family_id=%s days=%s window=%s",
+			request.user.id,
+			current_family.id,
+			days,
+			window,
+		)
+		return render(request, 'cash/transaction_dashboard.html', {
+			'family_cash': family_cash,
+			'days': days,
+			'window': window,
+			'chart_data': chart_data,
+			'expenses': expenses_range.order_by('-date')[:200],
+			'funds': funds_range.order_by('-date')[:200],
+		})
+	except Exception:
+		log.exception("Unhandled error in cash_transaction_dashboard user_id=%s", request.user.id)
 		raise

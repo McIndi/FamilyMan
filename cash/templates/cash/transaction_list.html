@@ -4,6 +4,9 @@
 <div style="margin-bottom: 1em;">
     <h2><strong>Total Available Funds:</strong> <span style="font-size:1.2em;">${{ family_cash|floatformat:2 }}</span><h2>
 </div>
+<div>
+    <a class="buttonLink" href="{% url 'cash_transaction_dashboard' %}">View Dashboard</a>
+</div>
 <form method="get" style="margin-bottom: 1em;">
     <label>Period:
         <select name="period">
