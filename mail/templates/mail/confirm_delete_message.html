@@ -2,10 +2,10 @@
 
 {% block content %}
 <h1>Confirm Delete</h1>
-<p>Are you sure you want to delete the message "{{ recipient.message.subject }}"?</p>
-<form method="post" action="{% url 'delete_message' recipient.message.id %}">
+<p>Are you sure you want to delete the message "{{ message.subject }}"?</p>
+<form method="post" action="{% url 'delete_message' message.id %}">
     {% csrf_token %}
     <button type="submit" class="btn btn-danger">Yes, Delete</button>
-    <a href="{% url 'message_detail' recipient.message.id %}" class="btn btn-secondary">Cancel</a>
+    <a href="{% url 'message_detail' message.id %}" class="btn btn-secondary">Cancel</a>
 </form>
 {% endblock %}

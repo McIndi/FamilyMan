@@ -54,3 +54,32 @@ class MeritsViewTests(TestCase):
         demerit = Demerit.objects.get(description="Late")
         self.assertEqual(demerit.child, self.child)
         self.assertEqual(demerit.creator, self.parent)
+
+    def test_child_can_view_merit_dashboard(self):
+        """Child users can view the merit dashboard in read-only mode."""
+        self.client.force_login(self.child)
+        self._set_current_family(self.family)
+
+        response = self.client.get(reverse("merit_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["is_parent"])
+
+    def test_child_cannot_create_merits_or_demerits(self):
+        """Child users are blocked from creating merits and demerits."""
+        self.client.force_login(self.child)
+        self._set_current_family(self.family)
+
+        merit_response = self.client.post(
+            reverse("add_merit"),
+            {"merit-child": self.child.id, "merit-description": "Self-awarded", "merit-weight": 1},
+        )
+        demerit_response = self.client.post(
+            reverse("add_demerit"),
+            {"demerit-child": self.child.id, "demerit-description": "Self-awarded", "demerit-weight": 1},
+        )
+
+        self.assertRedirects(merit_response, reverse("family_dashboard"), target_status_code=200)
+        self.assertRedirects(demerit_response, reverse("family_dashboard"), target_status_code=200)
+        self.assertFalse(Merit.objects.filter(description="Self-awarded").exists())
+        self.assertFalse(Demerit.objects.filter(description="Self-awarded").exists())

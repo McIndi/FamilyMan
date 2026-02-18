@@ -42,6 +42,7 @@
 	</section>
 
 	<!-- Cash summary -->
+	{% if request.current_family_role != 'child' %}
 	<section style="flex: 1 1 300px; min-width: 250px;">
 		<h2>Cash Summary (Month-to-date)</h2>
 		<p>Income: <strong>${{ cash_summary.funds | floatformat:2 }}</strong></p>
@@ -49,6 +50,7 @@
 		<p>Available Cash: <strong>${{ cash_summary.available | floatformat:2 }}</strong></p>
 		<a href="{% url 'cash_transaction_list' %}">View Transactions</a>
 	</section>
+	{% endif %}
 
 	<!-- Shopping list summary -->
 	<section style="flex: 1 1 300px; min-width: 250px;">

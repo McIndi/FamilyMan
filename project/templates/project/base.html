@@ -72,7 +72,9 @@
             <li><a href="{% url 'inbox' %}">Inbox</a></li>
             <li><a href="{% url 'merit_dashboard' %}">Merits</a></li>
             <li><a href="{% url 'family_dashboard' %}">Family</a></li>
+            {% if request.current_family_role != 'child' %}
             <li><a href="{% url 'cash_transaction_list' %}">Cash</a></li>
+            {% endif %}
         </ul>
         <ul class="nav-right">
             <li>

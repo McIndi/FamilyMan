@@ -18,9 +18,13 @@
                 <tr>
                     <td>{{ child.user.username }}</td>
                     <td>
+                        {% if is_parent %}
                         <a href="#" class="demerit-link" data-child-user-id="{{ child.user.id }}">&#x2796;</a>
+                        {% endif %}
                         {{ score }} points
+                        {% if is_parent %}
                         <a href="#" class="merit-link" data-child-user-id="{{ child.user.id }}">&#x2795;</a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -29,6 +33,7 @@
     </ul>
 
     <!-- Add modals for MeritForm and DemeritForm -->
+    {% if is_parent %}
     <div id="merit-modal" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close">&times;</span>
@@ -52,6 +57,7 @@
             </form>
         </div>
     </div>
+    {% endif %}
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -62,6 +68,10 @@
             const meritChildSelect = document.getElementById('id_merit-child');
             const demeritChildSelect = document.getElementById('id_demerit-child');
             const closeButtons = document.querySelectorAll('.close');
+
+            if (!meritModal || !demeritModal) {
+                return;
+            }
 
             meritLinks.forEach(link => {
                 link.addEventListener('click', function(event) {

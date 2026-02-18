@@ -5,7 +5,7 @@ from django.forms.widgets import DateTimeInput, Select
 class EventForm(forms.ModelForm):
     class Meta:
         model = Event
-        exclude = ['family']
+        exclude = ['family', 'host']
         widgets = {
             'when': DateTimeInput(attrs={'type': 'datetime-local'}),
             'duration': Select(choices=[
@@ -17,7 +17,10 @@ class EventForm(forms.ModelForm):
             ]),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, family=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if not self.instance.pk:  # If creating a new event
-            self.fields.pop('host', None)  # Remove the 'host' field from the form
+        if 'attendees' in self.fields:
+            if family:
+                self.fields['attendees'].queryset = family.members.all()
+            else:
+                self.fields['attendees'].queryset = self.fields['attendees'].queryset.none()

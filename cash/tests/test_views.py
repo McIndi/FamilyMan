@@ -22,8 +22,10 @@ class CashViewTests(TestCase):
     def setUp(self):
         """Create a user, family, and login session."""
         self.user = get_user_model().objects.create_user("spender", password="Password123!")
+        self.child_user = get_user_model().objects.create_user("kid", password="Password123!")
         self.family = Family.objects.create(name="Budget")
         Membership.objects.create(user=self.user, family=self.family, role="parent")
+        Membership.objects.create(user=self.child_user, family=self.family, role="child")
         self.client.force_login(self.user)
         self._set_current_family(self.family)
 
@@ -198,3 +200,14 @@ class CashViewTests(TestCase):
         self.client.force_login(other_user)
         response = self.client.get(reverse("cash_transaction_dashboard"))
         self.assertRedirects(response, reverse("switch_family"), target_status_code=302)
+
+    def test_child_cannot_access_cash_views(self):
+        """Child role is blocked from cash app endpoints."""
+        self.client.force_login(self.child_user)
+        self._set_current_family(self.family)
+
+        list_response = self.client.get(reverse("cash_transaction_list"))
+        add_response = self.client.get(reverse("add_fund"))
+
+        self.assertEqual(list_response.status_code, 403)
+        self.assertEqual(add_response.status_code, 403)

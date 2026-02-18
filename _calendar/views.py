@@ -1,7 +1,8 @@
 import logging
 
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from .models import Event
 from .forms import EventForm
 from rest_framework.viewsets import ModelViewSet
@@ -23,7 +24,6 @@ Views:
 """
 
 @login_required
-@permission_required('_calendar.add_event', raise_exception=True)
 def event_create(request):
     """
     Create a new event.
@@ -35,6 +35,9 @@ def event_create(request):
     log = logging.getLogger(__name__)
     try:
         family = request.current_family
+        if not family:
+            log.warning("Event create blocked: no family user_id=%s", request.user.id)
+            return redirect('switch_family')
         log.debug(
             "Event create request user_id=%s family_id=%s method=%s",
             request.user.id,
@@ -42,8 +45,8 @@ def event_create(request):
             request.method,
         )
         if request.method == 'POST':
-            form = EventForm(request.POST)
-            if form.is_valid() and family:
+            form = EventForm(request.POST, family=family)
+            if form.is_valid():
                 event = form.save(commit=False)
                 event.host = request.user
                 event.family = family
@@ -59,12 +62,10 @@ def event_create(request):
                 if next_url:
                     return redirect(next_url)
                 return redirect('week_view', year=event.when.year, month=event.when.month, day=event.when.day)
-            if not family:
-                log.warning("Event create blocked: no family user_id=%s", request.user.id)
-            elif not form.is_valid():
+            if not form.is_valid():
                 log.warning("Event create invalid form user_id=%s family_id=%s", request.user.id, family.id)
         else:
-            form = EventForm()
+            form = EventForm(family=family)
             log.info("Event create form rendered user_id=%s", request.user.id)
         return render(request, '_calendar/event_form.html', {'form': form})
     except Exception:
@@ -72,7 +73,6 @@ def event_create(request):
         raise
 
 @login_required
-@permission_required('_calendar.change_event', raise_exception=True)
 def event_update(request, pk):
     """
     Update an existing event.
@@ -84,6 +84,9 @@ def event_update(request, pk):
     log = logging.getLogger(__name__)
     try:
         family = request.current_family
+        if not family:
+            log.warning("Event update blocked: no family user_id=%s event_id=%s", request.user.id, pk)
+            return redirect('switch_family')
         log.debug(
             "Event update request user_id=%s family_id=%s event_id=%s method=%s",
             request.user.id,
@@ -91,12 +94,9 @@ def event_update(request, pk):
             pk,
             request.method,
         )
-        event = get_object_or_404(Event, pk=pk, family=family) if family else None
-        if not event:
-            log.warning("Event update blocked: invalid event or family user_id=%s event_id=%s", request.user.id, pk)
-            return HttpResponseBadRequest("Invalid event or family context.")
+        event = get_object_or_404(Event, pk=pk, family=family)
         if request.method == 'POST':
-            form = EventForm(request.POST, instance=event)
+            form = EventForm(request.POST, instance=event, family=family)
             if form.is_valid():
                 form.save()
                 log.info(
@@ -108,7 +108,7 @@ def event_update(request, pk):
                 return redirect('week_view', year=event.when.year, month=event.when.month, day=event.when.day)
             log.warning("Event update invalid form user_id=%s family_id=%s event_id=%s", request.user.id, family.id, event.id)
         else:
-            form = EventForm(instance=event)
+            form = EventForm(instance=event, family=family)
             log.info("Event update form rendered user_id=%s event_id=%s", request.user.id, event.id)
         return render(request, '_calendar/event_form.html', {'form': form})
     except Exception:
@@ -116,7 +116,6 @@ def event_update(request, pk):
         raise
 
 @login_required
-@permission_required('_calendar.delete_event', raise_exception=True)
 def event_delete(request, pk):
     """
     Delete an event.
@@ -128,6 +127,9 @@ def event_delete(request, pk):
     log = logging.getLogger(__name__)
     try:
         family = request.current_family
+        if not family:
+            log.warning("Event delete blocked: no family user_id=%s event_id=%s", request.user.id, pk)
+            return redirect('switch_family')
         log.debug(
             "Event delete request user_id=%s family_id=%s event_id=%s method=%s",
             request.user.id,
@@ -135,10 +137,7 @@ def event_delete(request, pk):
             pk,
             request.method,
         )
-        event = get_object_or_404(Event, pk=pk, family=family) if family else None
-        if not event:
-            log.warning("Event delete blocked: invalid event or family user_id=%s event_id=%s", request.user.id, pk)
-            return HttpResponseBadRequest("Invalid event or family context.")
+        event = get_object_or_404(Event, pk=pk, family=family)
         if request.method == 'POST':
             event.delete()
             log.info(
@@ -155,7 +154,6 @@ def event_delete(request, pk):
         raise
 
 @login_required
-@permission_required('_calendar.view_event', raise_exception=True)
 def day_view(request, year, month, day):
     """
     View events for a specific day.
@@ -171,11 +169,12 @@ def day_view(request, year, month, day):
         end_date = date + timedelta(days=1) - timedelta(seconds=1)
         family = request.current_family
         if not family:
-            log.warning("Day view without family user_id=%s date=%s", request.user.id, date.date())
-        occurrences = Event.get_occurrences_in_range(start_date, end_date, family=family) if family else []
+            log.warning("Day view blocked: no family user_id=%s date=%s", request.user.id, date.date())
+            return redirect('switch_family')
+        occurrences = Event.get_occurrences_in_range(start_date, end_date, family=family)
         previous_date = date - timedelta(days=1)
         next_date = date + timedelta(days=1)
-        form = EventForm()  # Add a single form instance
+        form = EventForm(family=family)  # Add a single form instance
         log.debug(
             "Day view data user_id=%s family_id=%s date=%s events=%s",
             request.user.id,
@@ -195,7 +194,6 @@ def day_view(request, year, month, day):
         raise
 
 @login_required
-@permission_required('_calendar.view_event', raise_exception=True)
 def week_view(request, year, month, day):
     """
     View events for a specific week.
@@ -210,12 +208,13 @@ def week_view(request, year, month, day):
         end_date = start_date + timedelta(days=6, hours=23, minutes=59, seconds=59)
         family = request.current_family
         if not family:
-            log.warning("Week view without family user_id=%s start_date=%s", request.user.id, start_date.date())
-        occurrences = Event.get_occurrences_in_range(start_date, end_date, family=family) if family else []
+            log.warning("Week view blocked: no family user_id=%s start_date=%s", request.user.id, start_date.date())
+            return redirect('switch_family')
+        occurrences = Event.get_occurrences_in_range(start_date, end_date, family=family)
         week_dates = [start_date + timedelta(days=i) for i in range(7)]
         previous_date = start_date - timedelta(days=7)
         next_date = start_date + timedelta(days=7)
-        form = EventForm()  # Add a single form instance
+        form = EventForm(family=family)  # Add a single form instance
         log.debug(
             "Week view data user_id=%s family_id=%s start_date=%s events=%s",
             request.user.id,
@@ -237,7 +236,6 @@ def week_view(request, year, month, day):
         raise
 
 @login_required
-@permission_required('_calendar.view_event', raise_exception=True)
 def month_view(request, year, month):
     """
     View events for a specific month.
@@ -253,8 +251,9 @@ def month_view(request, year, month):
         end_date = make_aware(datetime(next_month.year, next_month.month, 1)) - timedelta(seconds=1)
         family = request.current_family
         if not family:
-            log.warning("Month view without family user_id=%s month=%s-%s", request.user.id, year, month)
-        occurrences = Event.get_occurrences_in_range(start_date, end_date, family=family) if family else []
+            log.warning("Month view blocked: no family user_id=%s month=%s-%s", request.user.id, year, month)
+            return redirect('switch_family')
+        occurrences = Event.get_occurrences_in_range(start_date, end_date, family=family)
 
         # Pass the actual month being viewed for the header
         header_date = make_aware(datetime(year, month, 1))
@@ -277,7 +276,7 @@ def month_view(request, year, month):
 
         previous_date = (start_date - timedelta(days=1)).replace(day=1)
         next_date = (end_date + timedelta(days=1)).replace(day=1)
-        form = EventForm()  # Add a single form instance
+        form = EventForm(family=family)  # Add a single form instance
         log.debug(
             "Month view data user_id=%s family_id=%s month=%s-%s events=%s",
             request.user.id,

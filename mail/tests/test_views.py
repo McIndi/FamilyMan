@@ -15,9 +15,12 @@ class MailViewTests(TestCase):
         """Create users, family, and login session."""
         self.sender = get_user_model().objects.create_user("sender", password="Password123!")
         self.recipient = get_user_model().objects.create_user("recipient", password="Password123!")
+        self.outsider = get_user_model().objects.create_user("outsider", password="Password123!")
         self.family = Family.objects.create(name="MailFamily")
+        self.other_family = Family.objects.create(name="OtherFamily")
         Membership.objects.create(user=self.sender, family=self.family, role="parent")
         Membership.objects.create(user=self.recipient, family=self.family, role="child")
+        Membership.objects.create(user=self.outsider, family=self.other_family, role="parent")
         self.client.force_login(self.sender)
         self._set_current_family(self.family)
 
@@ -93,3 +96,41 @@ class MailViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         message.refresh_from_db()
         self.assertEqual(message.subject, "New")
+
+    def test_message_detail_forbidden_for_non_participant(self):
+        """Only sender or listed recipients can view a message."""
+        message = Message.objects.create(
+            family=self.family,
+            subject="Private",
+            body="Body",
+            sender=self.sender,
+        )
+        Recipient.objects.create(message=message, recipient=self.recipient)
+
+        self.client.force_login(self.outsider)
+        self._set_current_family(self.other_family)
+        response = self.client.get(reverse("message_detail", args=[message.id]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_sender_can_view_message_detail_without_recipient_row(self):
+        """Message sender can view detail even without being in Recipient table."""
+        message = Message.objects.create(
+            family=self.family,
+            subject="Sender access",
+            body="Body",
+            sender=self.sender,
+        )
+        Recipient.objects.create(message=message, recipient=self.recipient)
+
+        response = self.client.get(reverse("message_detail", args=[message.id]))
+        self.assertEqual(response.status_code, 200)
+
+    def test_compose_rejects_recipient_outside_current_family(self):
+        """Compose form only accepts recipients in current family."""
+        response = self.client.post(
+            reverse("compose_message"),
+            {"subject": "Hi", "body": "Body", "recipients": [self.outsider.id]},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Message.objects.filter(subject="Hi", body="Body").exists())

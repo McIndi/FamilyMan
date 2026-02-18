@@ -6,10 +6,17 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Sum
 from django.db.models.functions import TruncDate
+from django.http import HttpResponseForbidden
 from .models import Fund, Expense, Category, Receipt
 from .forms import FundForm, ExpenseForm, ReceiptForm, CategoryForm
 from django.utils import timezone
 from datetime import timedelta
+from project.models import Membership
+
+
+def _has_cash_access(user, family):
+	membership = Membership.objects.filter(user=user, family=family).first()
+	return bool(membership and membership.role == 'parent')
 
 @login_required
 def edit_expense(request, expense_id):
@@ -19,6 +26,9 @@ def edit_expense(request, expense_id):
 		if not current_family:
 			log.warning("Edit expense blocked: no current family user_id=%s", request.user.id)
 			return redirect('switch_family')
+		if not _has_cash_access(request.user, current_family):
+			log.warning("Edit expense blocked: unauthorized role user_id=%s family_id=%s", request.user.id, current_family.id)
+			return HttpResponseForbidden("You do not have access to cash features.")
 		expense = get_object_or_404(Expense, id=expense_id, family=current_family)
 		if request.method == 'POST':
 			form = ExpenseForm(request.POST, instance=expense, family=current_family)
@@ -53,6 +63,9 @@ def delete_expense(request, expense_id):
 		if not current_family:
 			log.warning("Delete expense blocked: no current family user_id=%s", request.user.id)
 			return redirect('switch_family')
+		if not _has_cash_access(request.user, current_family):
+			log.warning("Delete expense blocked: unauthorized role user_id=%s family_id=%s", request.user.id, current_family.id)
+			return HttpResponseForbidden("You do not have access to cash features.")
 		expense = get_object_or_404(Expense, id=expense_id, family=current_family)
 		if request.method == 'POST':
 			expense.delete()
@@ -77,6 +90,9 @@ def edit_fund(request, fund_id):
 		if not current_family:
 			log.warning("Edit fund blocked: no current family user_id=%s", request.user.id)
 			return redirect('switch_family')
+		if not _has_cash_access(request.user, current_family):
+			log.warning("Edit fund blocked: unauthorized role user_id=%s family_id=%s", request.user.id, current_family.id)
+			return HttpResponseForbidden("You do not have access to cash features.")
 		fund = get_object_or_404(Fund, id=fund_id, family=current_family)
 		if request.method == 'POST':
 			form = FundForm(request.POST, instance=fund)
@@ -111,6 +127,9 @@ def delete_fund(request, fund_id):
 		if not current_family:
 			log.warning("Delete fund blocked: no current family user_id=%s", request.user.id)
 			return redirect('switch_family')
+		if not _has_cash_access(request.user, current_family):
+			log.warning("Delete fund blocked: unauthorized role user_id=%s family_id=%s", request.user.id, current_family.id)
+			return HttpResponseForbidden("You do not have access to cash features.")
 		fund = get_object_or_404(Fund, id=fund_id, family=current_family)
 		if request.method == 'POST':
 			fund.delete()
@@ -135,6 +154,9 @@ def add_fund(request):
 		if not current_family:
 			log.warning("Add fund blocked: no current family user_id=%s", request.user.id)
 			return redirect('switch_family')
+		if not _has_cash_access(request.user, current_family):
+			log.warning("Add fund blocked: unauthorized role user_id=%s family_id=%s", request.user.id, current_family.id)
+			return HttpResponseForbidden("You do not have access to cash features.")
 		if request.method == 'POST':
 			form = FundForm(request.POST)
 			if form.is_valid():
@@ -166,6 +188,9 @@ def add_expense(request):
 		if not current_family:
 			log.warning("Add expense blocked: no current family user_id=%s", request.user.id)
 			return redirect('switch_family')
+		if not _has_cash_access(request.user, current_family):
+			log.warning("Add expense blocked: unauthorized role user_id=%s family_id=%s", request.user.id, current_family.id)
+			return HttpResponseForbidden("You do not have access to cash features.")
 		category_form = CategoryForm()
 		expense_form = ExpenseForm(family=current_family)
 		if request.method == 'POST':
@@ -216,6 +241,9 @@ def upload_receipt(request, expense_id):
 		if not current_family:
 			log.warning("Upload receipt blocked: no current family user_id=%s", request.user.id)
 			return redirect('switch_family')
+		if not _has_cash_access(request.user, current_family):
+			log.warning("Upload receipt blocked: unauthorized role user_id=%s family_id=%s", request.user.id, current_family.id)
+			return HttpResponseForbidden("You do not have access to cash features.")
 		expense = get_object_or_404(Expense, id=expense_id, user=request.user, family=current_family)
 		if request.method == 'POST':
 			form = ReceiptForm(request.POST, request.FILES)
@@ -249,6 +277,9 @@ def cash_transaction_list(request):
 		if not current_family:
 			log.warning("Transaction list blocked: no current family user_id=%s", request.user.id)
 			return redirect('switch_family')
+		if not _has_cash_access(request.user, current_family):
+			log.warning("Transaction list blocked: unauthorized role user_id=%s family_id=%s", request.user.id, current_family.id)
+			return HttpResponseForbidden("You do not have access to cash features.")
 		period = request.GET.get('period', 'week')
 		search = request.GET.get('search', '')
 		category_ids = request.GET.getlist('categories')
@@ -309,6 +340,9 @@ def cash_transaction_dashboard(request):
 		if not current_family:
 			log.warning("Transaction dashboard blocked: no current family user_id=%s", request.user.id)
 			return redirect('switch_family')
+		if not _has_cash_access(request.user, current_family):
+			log.warning("Transaction dashboard blocked: unauthorized role user_id=%s family_id=%s", request.user.id, current_family.id)
+			return HttpResponseForbidden("You do not have access to cash features.")
 
 		def clamp_int(value, default, minimum, maximum):
 			try:

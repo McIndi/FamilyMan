@@ -18,6 +18,12 @@ def _format_form_errors(form):
         error_messages.append(f"{label}: {', '.join(errors)}")
     return " | ".join(error_messages)
 
+
+def _is_parent_in_current_family(user, family):
+    return Membership.objects.filter(user=user, family=family, role='parent').exists()
+
+
+@login_required
 def merit_dashboard(request):
     """
     Render the merit dashboard for the current family.
@@ -27,18 +33,9 @@ def merit_dashboard(request):
         if not request.current_family:
             log.warning("Merit dashboard blocked: no current family user_id=%s", request.user.id)
             return redirect('switch_family')  # Ensure a family is selected
-        merit_form = MeritForm(prefix="merit")
-        demerit_form = DemeritForm(prefix="demerit")
-
-        # Check if the user is a parent in the current family
-        membership = Membership.objects.filter(user=request.user, family=request.current_family, role='parent').first()
-        if not membership:
-            log.warning(
-                "Merit dashboard blocked: not a parent user_id=%s family_id=%s",
-                request.user.id,
-                request.current_family.id,
-            )
-            return redirect('family_dashboard')  # Redirect if the user is not a parent
+        is_parent = _is_parent_in_current_family(request.user, request.current_family)
+        merit_form = MeritForm(prefix="merit") if is_parent else None
+        demerit_form = DemeritForm(prefix="demerit") if is_parent else None
 
         children = Membership.objects.filter(family=request.current_family, role='child').select_related('user')
         merits = Merit.objects.filter(child__families=request.current_family).select_related('child', 'creator')
@@ -77,6 +74,7 @@ def merit_dashboard(request):
                 'score_by_child': score_by_child,
                 'merit_form': merit_form,
                 'demerit_form': demerit_form,
+                'is_parent': is_parent,
             }
         )
     except Exception:
@@ -94,6 +92,14 @@ def add_merit(request):
         if not request.current_family:
             log.warning("Add merit blocked: no current family user_id=%s", request.user.id)
             return redirect('switch_family')
+        if not _is_parent_in_current_family(request.user, request.current_family):
+            log.warning(
+                "Add merit blocked: not a parent user_id=%s family_id=%s",
+                request.user.id,
+                request.current_family.id,
+            )
+            messages.error(request, "Only parents can add merits.")
+            return redirect('family_dashboard')
         if request.method == 'POST':
             form = MeritForm(request.POST, prefix="merit")
             if form.is_valid():
@@ -149,6 +155,14 @@ def add_demerit(request):
         if not request.current_family:
             log.warning("Add demerit blocked: no current family user_id=%s", request.user.id)
             return redirect('switch_family')
+        if not _is_parent_in_current_family(request.user, request.current_family):
+            log.warning(
+                "Add demerit blocked: not a parent user_id=%s family_id=%s",
+                request.user.id,
+                request.current_family.id,
+            )
+            messages.error(request, "Only parents can add demerits.")
+            return redirect('family_dashboard')
         if request.method == 'POST':
             form = DemeritForm(request.POST, prefix="demerit")
             if form.is_valid():

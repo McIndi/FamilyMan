@@ -25,3 +25,15 @@ class FamilyContextMiddlewareTests(TestCase):
         response = self.client.get(reverse("landing_page"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.client.session.get("current_family_id"), self.family.id)
+
+    def test_invalid_session_family_is_cleared(self):
+        """Middleware clears forged session family ids not linked to the user."""
+        other_family = Family.objects.create(name="NotMine")
+        session = self.client.session
+        session["current_family_id"] = other_family.id
+        session.save()
+
+        response = self.client.get(reverse("landing_page"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(self.client.session.get("current_family_id"))
