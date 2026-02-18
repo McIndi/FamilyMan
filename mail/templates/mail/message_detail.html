@@ -33,9 +33,29 @@
 
 {% block content %}
 <h1>{{ message.subject }}</h1>
-<p><strong>From:</strong> {{ message.sender.username }}</p>
-<p><strong>To:</strong> {% for recipient in recipients %}{{ recipient.recipient.username }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
-<p><strong>Sent:</strong> {{ message.sent_at|date:"M d, Y H:i" }}</p>
+<div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+    {% if message.sender.profile_pic %}
+        <img src="{{ message.sender.profile_pic.url }}" alt="{{ message.sender.username }}" class="profile-pic profile-pic-medium">
+    {% else %}
+        <span class="profile-pic-default profile-pic-medium" style="font-size: 1.5rem;">{{ message.sender.username|slice:":1"|upper }}</span>
+    {% endif %}
+    <div>
+        <p style="margin: 0;"><strong>From:</strong> {{ message.sender.username }}</p>
+        <p style="margin: 0;"><strong>To:</strong> 
+            {% for recipient in recipients %}
+                <span class="profile-container" style="display: inline-flex; margin-right: 0.5rem;">
+                    {% if recipient.recipient.profile_pic %}
+                        <img src="{{ recipient.recipient.profile_pic.url }}" alt="{{ recipient.recipient.username }}" class="profile-pic profile-pic-tiny">
+                    {% else %}
+                        <span class="profile-pic-default profile-pic-tiny">{{ recipient.recipient.username|slice:":1"|upper }}</span>
+                    {% endif %}
+                    {{ recipient.recipient.username }}{% if not forloop.last %},{% endif %}
+                </span>
+            {% endfor %}
+        </p>
+        <p style="margin: 0;"><strong>Sent:</strong> {{ message.sent_at|date:"M d, Y H:i" }}</p>
+    </div>
+</div>
 <hr>
 <p>{{ message.body }}</p>
 <a class="buttonLink" href="{% url 'reply_message' message.id %}">Reply</a>

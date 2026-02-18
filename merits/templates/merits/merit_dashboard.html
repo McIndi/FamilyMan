@@ -9,14 +9,23 @@
         <table>
             <thead>
                 <tr>
-                    <th>Username</th>
+                    <th>Child</th>
                     <th>Merit Points</th>
                 </tr>
             </thead>
             <tbody>
                 {% for child, score in score_by_child.items %}
                 <tr>
-                    <td>{{ child.user.username }}</td>
+                    <td>
+                        <div class="profile-container">
+                            {% if child.user.profile_pic %}
+                                <img src="{{ child.user.profile_pic.url }}" alt="{{ child.user.username }}" class="profile-pic profile-pic-small">
+                            {% else %}
+                                <span class="profile-pic-default profile-pic-small">{{ child.user.username|slice:":1"|upper }}</span>
+                            {% endif %}
+                            <span>{{ child.user.username }}</span>
+                        </div>
+                    </td>
                     <td>
                         {% if is_parent %}
                         <a href="#" class="demerit-link" data-child-user-id="{{ child.user.id }}">&#x2796;</a>

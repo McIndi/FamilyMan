@@ -72,10 +72,17 @@
 		<h2>Merits & Demerits</h2>
 		<ul>
 			{% for summary in merits_summary %}
-				<li>
-					<strong>{{ summary.child.username }}</strong>: {{ summary.total }} points
-					<span style="color: #4caf50;">(+{{ summary.merit_points }})</span>
-					<span style="color: #f44336;">(-{{ summary.demerit_points }})</span>
+				<li class="profile-container" style="padding: 0.25rem 0;">
+					{% if summary.child.profile_pic %}
+						<img src="{{ summary.child.profile_pic.url }}" alt="{{ summary.child.username }}" class="profile-pic profile-pic-small">
+					{% else %}
+						<span class="profile-pic-default profile-pic-small">{{ summary.child.username|slice:":1"|upper }}</span>
+					{% endif %}
+					<span>
+						<strong>{{ summary.child.username }}</strong>: {{ summary.total }} points
+						<span style="color: #4caf50;">(+{{ summary.merit_points }})</span>
+						<span style="color: #f44336;">(-{{ summary.demerit_points }})</span>
+					</span>
 				</li>
 			{% empty %}
 				<li>No children or points yet.</li>

@@ -35,7 +35,14 @@
 <h2>Children in {{ request.current_family.name }}</h2>
 <ul>
     {% for child in children %}
-    <li>{{ child.user.username }}</li>
+    <li style="display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0;">
+        {% if child.user.profile_pic %}
+            <img src="{{ child.user.profile_pic.url }}" alt="{{ child.user.username }}" class="profile-pic profile-pic-small">
+        {% else %}
+            <span class="profile-pic-default profile-pic-small">{{ child.user.username|slice:":1"|upper }}</span>
+        {% endif %}
+        <span>{{ child.user.username }}</span>
+    </li>
     {% endfor %}
 </ul>
 {% endif %}

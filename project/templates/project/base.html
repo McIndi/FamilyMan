@@ -56,6 +56,39 @@
                 font-size: 1.05rem;
             }
         }
+        /* Profile picture styles */
+        .profile-pic {
+            border-radius: 50%;
+            object-fit: cover;
+            vertical-align: middle;
+        }
+        .profile-pic-tiny {
+            width: 24px;
+            height: 24px;
+        }
+        .profile-pic-small {
+            width: 40px;
+            height: 40px;
+        }
+        .profile-pic-medium {
+            width: 60px;
+            height: 60px;
+        }
+        .profile-pic-default {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: var(--primary, #4CAF50);
+            color: white;
+            font-weight: bold;
+            vertical-align: middle;
+        }
+        .profile-container {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
     </style>
     <!-- <link rel="stylesheet" href="https://classless.de/classless.css"> -->
     <!-- <link rel="stylesheet" href="https://classless.de/classless-tiny.css"> -->
@@ -84,7 +117,16 @@
                 </label>
             </li>
             {% if user.is_authenticated %}
-                <li><a href="{% url 'profile' %}">Profile</a></li>
+                <li>
+                    <a href="{% url 'profile' %}" class="profile-container">
+                        {% if user.profile_pic %}
+                            <img src="{{ user.profile_pic.url }}" alt="{{ user.username }}" class="profile-pic profile-pic-tiny">
+                        {% else %}
+                            <span class="profile-pic-default profile-pic-tiny">{{ user.username|slice:":1"|upper }}</span>
+                        {% endif %}
+                        Profile
+                    </a>
+                </li>
                 <li>
                     <form method="post" action="{% url 'logout' %}" style="display: inline;">
                         {% csrf_token %}

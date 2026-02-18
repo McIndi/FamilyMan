@@ -5,10 +5,17 @@
 <a href="{% url 'compose_message' %}" class="btn btn-primary">Write a Message</a>
 <ul>
     {% for recipient in page_obj %}
-    <li>
-        <a href="{% url 'message_detail' recipient.message.id %}">
-            {% if not recipient.read_at %}<strong>[Unread]</strong>{% endif %}
-            {{ recipient.message.subject }} - {{ recipient.message.sent_at|date:"M d, Y H:i" }}
+    <li style="display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0;">
+        <a href="{% url 'message_detail' recipient.message.id %}" class="profile-container" style="flex: 1; text-decoration: none;">
+            {% if recipient.message.sender.profile_pic %}
+                <img src="{{ recipient.message.sender.profile_pic.url }}" alt="{{ recipient.message.sender.username }}" class="profile-pic profile-pic-small">
+            {% else %}
+                <span class="profile-pic-default profile-pic-small">{{ recipient.message.sender.username|slice:":1"|upper }}</span>
+            {% endif %}
+            <span>
+                {% if not recipient.read_at %}<strong>[Unread]</strong>{% endif %}
+                <strong>{{ recipient.message.sender.username }}</strong>: {{ recipient.message.subject }} - {{ recipient.message.sent_at|date:"M d, Y H:i" }}
+            </span>
         </a>
         <a href="{% url 'confirm_delete_message' recipient.message.id %}" class="btn btn-danger" title="Delete">&#x2716;</a>
         <a href="{% url 'edit_message' recipient.message.id %}" class="btn btn-secondary" title="Edit">&#x270E;</a>
