@@ -20,7 +20,7 @@ from .forms import ItemForm
 from rest_framework.viewsets import ModelViewSet
 from .serializers import ItemSerializer
 from django_filters.rest_framework import DjangoFilterBackend
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required
 from rest_framework.permissions import IsAuthenticated
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -30,8 +30,15 @@ from django.http import HttpResponseBadRequest
 from django.http import HttpResponse
 from datetime import datetime
 
+
+def _require_family_or_redirect(request, log, action):
+    family = getattr(request, 'current_family', None)
+    if not family:
+        log.warning("%s blocked: no family user_id=%s", action, request.user.id)
+        return None, redirect('switch_family')
+    return family, None
+
 @login_required
-@permission_required('shoppinglist.view_item', raise_exception=True)
 def download_shopping_list(request):
     """
     Download the current shopping list as a markdown file.
@@ -39,18 +46,20 @@ def download_shopping_list(request):
     """
     log = logging.getLogger(__name__)
     try:
+        family, redirect_response = _require_family_or_redirect(request, log, "Download shopping list")
+        if redirect_response:
+            return redirect_response
         kind = request.GET.getlist('kind')
         if not kind:
             kind = ['need', 'want']
-        family = request.current_family
         log.debug(
             "Download shopping list user_id=%s family_id=%s kinds=%s",
             request.user.id,
             family.id if family else None,
             kind,
         )
-        needs = Item.objects.filter(kind='need', obtained=False, family=family) if 'need' in kind and family else []
-        wants = Item.objects.filter(kind='want', obtained=False, family=family) if 'want' in kind and family else []
+        needs = Item.objects.filter(kind='need', obtained=False, family=family) if 'need' in kind else []
+        wants = Item.objects.filter(kind='want', obtained=False, family=family) if 'want' in kind else []
 
         lines = []
         if 'need' in kind:
@@ -82,7 +91,6 @@ def download_shopping_list(request):
 
 
 @login_required
-@permission_required('shoppinglist.view_item', raise_exception=True)
 def item_list(request):
     """
     Display a list of all items in the shopping list that have not been obtained, split into 'Need' and 'Want'.
@@ -93,11 +101,11 @@ def item_list(request):
     """
     log = logging.getLogger(__name__)
     try:
-        family = request.current_family
-        if not family:
-            log.warning("Item list without family user_id=%s", request.user.id)
-        need_items = Item.objects.filter(kind='need', obtained=False, family=family) if family else []
-        want_items = Item.objects.filter(kind='want', obtained=False, family=family) if family else []
+        family, redirect_response = _require_family_or_redirect(request, log, "Item list")
+        if redirect_response:
+            return redirect_response
+        need_items = Item.objects.filter(kind='need', obtained=False, family=family)
+        want_items = Item.objects.filter(kind='want', obtained=False, family=family)
         log.debug(
             "Item list data user_id=%s family_id=%s needs=%s wants=%s",
             request.user.id,
@@ -111,7 +119,6 @@ def item_list(request):
         raise
 
 @login_required
-@permission_required('shoppinglist.add_item', raise_exception=True)
 def item_create(request):
     """
     Handle the creation of a new item in the shopping list.
@@ -122,10 +129,12 @@ def item_create(request):
     """
     log = logging.getLogger(__name__)
     try:
-        family = request.current_family
+        family, redirect_response = _require_family_or_redirect(request, log, "Item create")
+        if redirect_response:
+            return redirect_response
         if request.method == 'POST':
             form = ItemForm(request.POST)
-            if form.is_valid() and family:
+            if form.is_valid():
                 item = form.save(commit=False)
                 item.family = family
                 item.save()
@@ -136,9 +145,7 @@ def item_create(request):
                     item.id,
                 )
                 return redirect('item_list')
-            if not family:
-                log.warning("Item create blocked: no family user_id=%s", request.user.id)
-            elif not form.is_valid():
+            if not form.is_valid():
                 log.warning("Item create invalid form user_id=%s family_id=%s", request.user.id, family.id)
         else:
             form = ItemForm()
@@ -149,7 +156,6 @@ def item_create(request):
         raise
 
 @login_required
-@permission_required('shoppinglist.change_item', raise_exception=True)
 def item_update(request, pk):
     """
     Handle updating an existing item in the shopping list.
@@ -160,7 +166,9 @@ def item_update(request, pk):
     """
     log = logging.getLogger(__name__)
     try:
-        family = request.current_family
+        family, redirect_response = _require_family_or_redirect(request, log, "Item update")
+        if redirect_response:
+            return redirect_response
         log.debug(
             "Item update request user_id=%s family_id=%s item_id=%s method=%s",
             request.user.id,
@@ -168,10 +176,7 @@ def item_update(request, pk):
             pk,
             request.method,
         )
-        item = get_object_or_404(Item, pk=pk, family=family) if family else None
-        if not item:
-            log.warning("Item update blocked: invalid item or family user_id=%s item_id=%s", request.user.id, pk)
-            return HttpResponseBadRequest("Invalid item or family context.")
+        item = get_object_or_404(Item, pk=pk, family=family)
         if request.method == 'POST':
             form = ItemForm(request.POST, instance=item)
             if form.is_valid():
@@ -193,7 +198,6 @@ def item_update(request, pk):
         raise
 
 @login_required
-@permission_required('shoppinglist.delete_item', raise_exception=True)
 def item_delete(request, pk):
     """
     Handle deleting an item from the shopping list.
@@ -204,7 +208,9 @@ def item_delete(request, pk):
     """
     log = logging.getLogger(__name__)
     try:
-        family = request.current_family
+        family, redirect_response = _require_family_or_redirect(request, log, "Item delete")
+        if redirect_response:
+            return redirect_response
         log.debug(
             "Item delete request user_id=%s family_id=%s item_id=%s method=%s",
             request.user.id,
@@ -212,10 +218,7 @@ def item_delete(request, pk):
             pk,
             request.method,
         )
-        item = get_object_or_404(Item, pk=pk, family=family) if family else None
-        if not item:
-            log.warning("Item delete blocked: invalid item or family user_id=%s item_id=%s", request.user.id, pk)
-            return HttpResponseBadRequest("Invalid item or family context.")
+        item = get_object_or_404(Item, pk=pk, family=family)
         if request.method == 'POST':
             item.delete()
             log.info(
@@ -245,7 +248,6 @@ def item_delete(request, pk):
 #     return render(request, 'shoppinglist/partials/item_list.html', {'items': items})
 
 @login_required
-@permission_required('shoppinglist.view_item', raise_exception=True)
 def past_items(request):
     """
     Display a list of all items in the shopping list that have been obtained.
@@ -256,10 +258,10 @@ def past_items(request):
     """
     log = logging.getLogger(__name__)
     try:
-        family = request.current_family
-        if not family:
-            log.warning("Past items without family user_id=%s", request.user.id)
-        obtained_items = Item.objects.filter(obtained=True, family=family) if family else []
+        family, redirect_response = _require_family_or_redirect(request, log, "Past items")
+        if redirect_response:
+            return redirect_response
+        obtained_items = Item.objects.filter(obtained=True, family=family)
         log.debug(
             "Past items data user_id=%s family_id=%s items=%s",
             request.user.id,

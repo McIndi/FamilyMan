@@ -1,7 +1,6 @@
 """View tests for shoppinglist app."""
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Permission
 from django.test import TestCase
 from django.urls import reverse
 
@@ -19,20 +18,12 @@ class ShoppinglistViewTests(TestCase):
         Membership.objects.create(user=self.user, family=self.family, role="parent")
         self.client.force_login(self.user)
         self._set_current_family(self.family)
-        self._grant_permissions(self.user)
 
     def _set_current_family(self, family):
         """Attach current family to session."""
         session = self.client.session
         session["current_family_id"] = family.id
         session.save()
-
-    def _grant_permissions(self, user):
-        """Grant item permissions for view and mutation."""
-        codenames = ["view_item", "add_item", "change_item", "delete_item"]
-        for codename in codenames:
-            permission = Permission.objects.get(codename=codename)
-            user.user_permissions.add(permission)
 
     def test_item_create(self):
         """Create view stores an item for the family."""
@@ -68,3 +59,49 @@ class ShoppinglistViewTests(TestCase):
         response = self.client.get(reverse("download_shopping_list"), {"kind": "need"})
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"# Needs", response.content)
+
+    def test_item_list_redirects_without_family(self):
+        """List view redirects when there is no selected family context."""
+        another_family = Family.objects.create(name="AnotherGrocers")
+        Membership.objects.create(user=self.user, family=another_family, role="parent")
+        session = self.client.session
+        session.pop("current_family_id", None)
+        session.save()
+
+        response = self.client.get(reverse("item_list"))
+
+        self.assertRedirects(response, reverse("switch_family"), target_status_code=302)
+
+    def test_item_update_not_found_for_other_family_item(self):
+        """Update endpoint cannot mutate items from another family."""
+        other_family = Family.objects.create(name="OtherGrocers")
+        item = Item.objects.create(family=other_family, text="Hidden", kind="need")
+
+        response = self.client.post(
+            reverse("item_update", args=[item.id]),
+            {"text": "Visible", "kind": "want", "obtained": False},
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_child_can_create_and_update_items(self):
+        """Child users can create and update items for their family."""
+        child = get_user_model().objects.create_user("kid", password="Password123!")
+        Membership.objects.create(user=child, family=self.family, role="child")
+        self.client.force_login(child)
+        self._set_current_family(self.family)
+
+        create_response = self.client.post(
+            reverse("item_create"),
+            {"text": "Juice", "kind": "need"},
+        )
+        self.assertEqual(create_response.status_code, 302)
+        item = Item.objects.get(text="Juice")
+
+        update_response = self.client.post(
+            reverse("item_update", args=[item.id]),
+            {"text": "Juice", "kind": "want", "obtained": False},
+        )
+        self.assertEqual(update_response.status_code, 302)
+        item.refresh_from_db()
+        self.assertEqual(item.kind, "want")

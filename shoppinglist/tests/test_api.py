@@ -41,6 +41,8 @@ class ShoppinglistApiTests(TestCase):
     def test_api_list_items(self):
         """API list returns family items only."""
         Item.objects.create(family=self.family, text="Bananas", kind="need")
+        other_family = Family.objects.create(name="OtherApiFamily")
+        Item.objects.create(family=other_family, text="Secret", kind="need")
         response = self.client.get("/shoppinglist/api/shoppinglist/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data), 1)
