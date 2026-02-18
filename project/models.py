@@ -1,11 +1,23 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+import os
+from uuid import uuid4
+
+
+def user_profile_pic_path(instance, filename):
+    """Generate a standardized path for user profile pictures."""
+    ext = filename.split('.')[-1]
+    filename = f"user_{instance.id}_{uuid4().hex[:8]}.{ext}"
+    return os.path.join('profile_pics', filename)
+
 
 class CustomUser(AbstractUser):
     """
     Custom user model extending the default Django user.
     """
     child = models.BooleanField(default=True)
+    bio = models.TextField(blank=True, null=True, help_text="Tell us about yourself")
+    profile_pic = models.ImageField(upload_to=user_profile_pic_path, blank=True, null=True)
 
 CustomUser.add_to_class('families', models.ManyToManyField('Family', through='Membership', related_name='members'))
 

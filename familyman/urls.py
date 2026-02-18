@@ -16,6 +16,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -29,4 +31,12 @@ urlpatterns = [
 
 urlpatterns += [
     path('accounts/', include('allauth.urls')),  # Add allauth URLs
+]
+
+# Serve media files (user uploads) for production WSGI servers
+# This works with cheroot and other WSGI servers
+from project import views as project_views
+from django.urls import re_path
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', project_views.serve_media, name='serve_media'),
 ]

@@ -1,16 +1,21 @@
 import logging
+import os
+import mimetypes
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.contrib.auth import update_session_auth_hash
+from django.http import JsonResponse, FileResponse, Http404
 from django.contrib import messages
 from django import forms
 from django.db import models
+from django.conf import settings
 
 from .models import Membership, Family
 from .models import CustomUser
+from .forms import ProfileForm, CustomPasswordChangeForm
 
 def landing_page(request):
     """
@@ -268,3 +273,56 @@ def switch_family(request):
     except Exception:
         log.exception("Unhandled error in switch_family user_id=%s", getattr(request.user, 'id', None))
         raise
+
+
+@login_required
+def profile(request):
+    """View for user profile page with edit and password change functionality."""
+    log = logging.getLogger(__name__)
+    try:
+        profile_form = ProfileForm(instance=request.user)
+        password_form = CustomPasswordChangeForm(request.user)
+        
+        if request.method == 'POST':
+            form_type = request.POST.get('form_type')
+            
+            if form_type == 'profile':
+                profile_form = ProfileForm(request.POST, request.FILES, instance=request.user)
+                if profile_form.is_valid():
+                    profile_form.save()
+                    messages.success(request, 'Your profile has been updated successfully.')
+                    log.info("Profile updated user_id=%s", request.user.id)
+                    return redirect('profile')
+                else:
+                    log.warning("Profile update failed: form invalid user_id=%s", request.user.id)
+            
+            elif form_type == 'password':
+                password_form = CustomPasswordChangeForm(request.user, request.POST)
+                if password_form.is_valid():
+                    user = password_form.save()
+                    update_session_auth_hash(request, user)  # Keep user logged in after password change
+                    messages.success(request, 'Your password has been changed successfully.')
+                    log.info("Password changed user_id=%s", request.user.id)
+                    return redirect('profile')
+                else:
+                    log.warning("Password change failed: form invalid user_id=%s", request.user.id)
+        
+        log.debug("Profile page loaded user_id=%s", request.user.id)
+        return render(request, 'project/profile.html', {
+            'profile_form': profile_form,
+            'password_form': password_form,
+        })
+    except Exception:
+        log.exception("Unhandled error in profile user_id=%s", request.user.id)
+        raise
+
+
+def serve_media(request, path):
+    """Serve media files for production WSGI servers like cheroot."""
+    file_path = os.path.join(settings.MEDIA_ROOT, path)
+    
+    if not os.path.exists(file_path):
+        raise Http404("Media file not found")
+    
+    content_type, _ = mimetypes.guess_type(file_path)
+    return FileResponse(open(file_path, 'rb'), content_type=content_type)
