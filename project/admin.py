@@ -4,7 +4,7 @@ from .models import CustomUser, Membership, Family
 # Registering the CustomUser model with the Django admin site
 @admin.register(CustomUser)
 class CustomUserAdmin(admin.ModelAdmin):
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff')
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'profile_pic')
     search_fields = ('username', 'email', 'first_name', 'last_name')
     list_filter = ('is_staff', 'is_active')
     ordering = ('username',)
@@ -21,11 +21,14 @@ class CustomUserAdmin(admin.ModelAdmin):
         ('Important dates', {
             'fields': ('last_login',)
         }),
+        ('Profile', {
+            'fields': ('bio', 'profile_pic')
+        }),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('username', 'password1', 'password2', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'is_superuser')
+            'fields': ('username', 'password1', 'password2', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'is_superuser', 'bio', 'profile_pic')
         }),
     )
     filter_horizontal = ('groups', 'user_permissions')
