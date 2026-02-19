@@ -34,6 +34,8 @@ def landing_page(request):
             cash_summary = {'funds': 0, 'expenses': 0, 'available': 0}
             shopping_needs = []
             merits_summary = []
+            open_tasks = []
+            recent_completed_tasks = []
             current_family = getattr(request, 'current_family', None)
             if current_family:
                 from mail.models import Recipient
@@ -79,6 +81,17 @@ def landing_page(request):
                         'demerit_points': demerit_points,
                         'total': merit_points - demerit_points
                     })
+                from tasks.models import Task
+                from datetime import timedelta
+                open_tasks = Task.objects.filter(
+                    family=current_family,
+                    completed=False,
+                ).select_related('created_by').order_by('due_date', '-created_at')[:3]
+                recent_completed_tasks = Task.objects.filter(
+                    family=current_family,
+                    completed=True,
+                    completed_at__gte=now() - timedelta(days=7),
+                ).prefetch_related('completed_by').order_by('-completed_at')[:3]
                 membership = Membership.objects.filter(user=request.user, family=current_family).first()
                 if membership:
                     current_family_role = membership.role
@@ -93,6 +106,8 @@ def landing_page(request):
                 'cash_summary': cash_summary,
                 'shopping_needs': shopping_needs,
                 'merits_summary': merits_summary,
+                'open_tasks': open_tasks,
+                'recent_completed_tasks': recent_completed_tasks,
                 'current_family': current_family,
             })
             log.debug(

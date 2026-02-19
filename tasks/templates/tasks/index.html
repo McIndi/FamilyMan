@@ -1,0 +1,116 @@
+{% extends 'project/base.html' %}
+
+{% block title %}Tasks{% endblock %}
+
+{% block content %}
+<h1>Tasks</h1>
+<p><a href="{% url 'task_create' %}">Add Task</a></p>
+
+<section>
+    <h2>Open Tasks</h2>
+    {% if open_tasks %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Due</th>
+                    <th>Created By</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in open_tasks %}
+                    <tr>
+                        <td><strong>{{ task.title }}</strong></td>
+                        <td>
+                            {% if task.due_date %}
+                                {{ task.due_date|date:"M d, Y" }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="profile-container">
+                                {% if task.created_by.profile_pic %}
+                                    <img src="{{ task.created_by.profile_pic.url }}" alt="{{ task.created_by.username }}" class="profile-pic profile-pic-tiny">
+                                {% else %}
+                                    <span class="profile-pic-default profile-pic-tiny">{{ task.created_by.username|slice:":1"|upper }}</span>
+                                {% endif %}
+                                {{ task.created_by.username }}
+                            </span>
+                        </td>
+                        <td>{{ task.description|default:"—" }}</td>
+                        <td>
+                            {% if is_parent or task.created_by_id == user.id %}
+                                <a href="{% url 'task_edit' task.id %}">Edit</a>
+                            {% endif %}
+                            {% if is_parent %}
+                                <br>
+                                <a href="{% url 'task_complete' task.id %}">Complete</a>
+                                <br>
+                                <a href="{% url 'task_delete' task.id %}">Delete</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No open tasks right now.</p>
+    {% endif %}
+</section>
+
+<section style="margin-top: 2rem;">
+    <h2>Recently Completed (Last 7 Days)</h2>
+    {% if recent_completed_tasks %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Completed At</th>
+                    <th>Completed By</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in recent_completed_tasks %}
+                    <tr>
+                        <td><strong>{{ task.title }}</strong></td>
+                        <td>
+                            {% if task.completed_at %}
+                                {{ task.completed_at|date:"M d, Y H:i" }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span style="display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                {% for person in task.completed_by.all %}
+                                    <span class="profile-container">
+                                        {% if person.profile_pic %}
+                                            <img src="{{ person.profile_pic.url }}" alt="{{ person.username }}" class="profile-pic profile-pic-tiny">
+                                        {% else %}
+                                            <span class="profile-pic-default profile-pic-tiny">{{ person.username|slice:":1"|upper }}</span>
+                                        {% endif %}
+                                        {{ person.username }}
+                                    </span>{% if not forloop.last %}, {% endif %}
+                                {% empty %}
+                                    Unknown
+                                {% endfor %}
+                            </span>
+                        </td>
+                        <td>
+                            {% if is_parent or task.created_by_id == user.id %}
+                                <a href="{% url 'task_edit' task.id %}">Edit</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No tasks completed in the last 7 days.</p>
+    {% endif %}
+</section>
+{% endblock %}

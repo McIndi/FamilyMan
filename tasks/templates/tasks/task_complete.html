@@ -1,0 +1,14 @@
+{% extends 'project/base.html' %}
+
+{% block title %}Complete Task{% endblock %}
+
+{% block content %}
+<h1>Complete Task</h1>
+<p>Mark <strong>{{ task.title }}</strong> as complete and select who helped.</p>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Mark Complete</button>
+</form>
+<p><a href="{% url 'task_list' %}">Back to Tasks</a></p>
+{% endblock %}

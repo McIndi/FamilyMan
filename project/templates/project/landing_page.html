@@ -67,6 +67,56 @@
 		<a href="{% url 'item_list' %}">View Shopping List</a>
 	</section>
 
+	<!-- Tasks summary -->
+	<section style="flex: 1 1 300px; min-width: 250px;">
+		<h2>Tasks</h2>
+		<p><strong>{{ open_tasks|length }}</strong> open (showing up to 3)</p>
+		<ul>
+			{% for task in open_tasks %}
+				<li>
+					<strong>{{ task.title }}</strong>
+					{% if task.due_date %}
+						<span style="color: #888;">(Due {{ task.due_date|date:'M d' }})</span>
+					{% endif %}
+					<br>
+					<span class="profile-container">
+						{% if task.created_by.profile_pic %}
+							<img src="{{ task.created_by.profile_pic.url }}" alt="{{ task.created_by.username }}" class="profile-pic profile-pic-tiny">
+						{% else %}
+							<span class="profile-pic-default profile-pic-tiny">{{ task.created_by.username|slice:":1"|upper }}</span>
+						{% endif %}
+						{{ task.created_by.username }}
+					</span>
+				</li>
+			{% empty %}
+				<li>No open tasks.</li>
+			{% endfor %}
+		</ul>
+		{% if recent_completed_tasks %}
+			<p><small>Recently completed:</small></p>
+			<ul>
+				{% for task in recent_completed_tasks %}
+					<li>
+						{{ task.title }}
+						{% for person in task.completed_by.all %}
+							<span class="profile-container">
+								{% if person.profile_pic %}
+									<img src="{{ person.profile_pic.url }}" alt="{{ person.username }}" class="profile-pic profile-pic-tiny">
+								{% else %}
+									<span class="profile-pic-default profile-pic-tiny">{{ person.username|slice:":1"|upper }}</span>
+								{% endif %}
+								{{ person.username }}
+							</span>{% if not forloop.last %}, {% endif %}
+						{% empty %}
+							<span>Unknown</span>
+						{% endfor %}
+					</li>
+				{% endfor %}
+			</ul>
+		{% endif %}
+		<a href="{% url 'task_list' %}">View Tasks</a>
+	</section>
+
 	<!-- Merits summary -->
 	<section style="flex: 1 1 300px; min-width: 250px;">
 		<h2>Merits & Demerits</h2>

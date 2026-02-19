@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'mail', 
     'merits',
     'cash',
+    'tasks',
 ]
 
 MIDDLEWARE = [
@@ -227,6 +228,11 @@ LOGGING = {
             'propagate': True,
         },
         'cash': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+        'tasks': {
             'handlers': ['console'],
             'level': 'ERROR',
             'propagate': True,

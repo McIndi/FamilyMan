@@ -1,0 +1,19 @@
+{% extends 'project/base.html' %}
+
+{% block title %}{% if mode == 'edit' %}Edit Task{% else %}Add Task{% endif %}{% endblock %}
+
+{% block content %}
+<h1>{% if mode == 'edit' %}Edit Task{% else %}Add Task{% endif %}</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save</button>
+</form>
+{% if mode == 'edit' and task.completed and is_parent %}
+<form method="post" action="{% url 'task_reopen' task.id %}" style="margin-top: 1rem;">
+    {% csrf_token %}
+    <button type="submit">Mark Not Complete</button>
+</form>
+{% endif %}
+<p><a href="{% url 'task_list' %}">Back to Tasks</a></p>
+{% endblock %}
