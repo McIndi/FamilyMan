@@ -109,6 +109,7 @@
             {% if request.current_family_role != 'child' %}
             <li><a href="{% url 'cash_transaction_list' %}">Cash</a></li>
             {% endif %}
+            <li><a href="{% url 'wallet_view' %}">Wallet</a></li>
         </ul>
         <ul class="nav-right">
             <li>

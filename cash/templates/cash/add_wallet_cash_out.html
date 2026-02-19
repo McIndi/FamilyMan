@@ -1,0 +1,10 @@
+{% extends 'project/base.html' %}
+{% block content %}
+<h1>Cash Out</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Record Cash Out</button>
+    <a href="{% url 'wallet_view' %}">Cancel</a>
+</form>
+{% endblock %}

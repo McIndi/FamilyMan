@@ -6,6 +6,7 @@
 </div>
 <div>
     <a class="buttonLink" href="{% url 'cash_transaction_dashboard' %}">View Dashboard</a>
+    <a class="buttonLink" href="{% url 'wallet_view' %}">My Wallet</a>
 </div>
 <form method="get" style="margin-bottom: 1em;">
     <label>Period:
@@ -63,7 +64,8 @@
                 </td>
                 <td>
                     <a href="{% url 'edit_expense' expense.id %}">Edit</a> |
-                    <a href="{% url 'delete_expense' expense.id %}">Delete</a>
+                    <a href="{% url 'delete_expense' expense.id %}">Delete</a> |
+                    <a href="{% url 'wallet_from_expense' expense.id %}" title="Move this amount to your cash wallet">+ Wallet</a>
                 </td>
             </tr>
         {% empty %}

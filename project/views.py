@@ -97,6 +97,18 @@ def landing_page(request):
                     current_family_role = membership.role
             else:
                 log.warning("Landing page without current family user_id=%s", request.user.id)
+            from cash.models import WalletTransaction
+            wallet_txns = WalletTransaction.objects.filter(user=request.user, family=current_family) if current_family else WalletTransaction.objects.none()
+            wallet_in = wallet_txns.filter(direction='in').aggregate(total=models.Sum('amount'))['total'] or 0
+            wallet_out = wallet_txns.filter(direction='out').aggregate(total=models.Sum('amount'))['total'] or 0
+            my_wallet_balance = wallet_in - wallet_out
+
+            for entry in merits_summary:
+                child_wallet_txns = WalletTransaction.objects.filter(user=entry['child'], family=current_family)
+                child_in = child_wallet_txns.filter(direction='in').aggregate(total=models.Sum('amount'))['total'] or 0
+                child_out = child_wallet_txns.filter(direction='out').aggregate(total=models.Sum('amount'))['total'] or 0
+                entry['wallet_balance'] = child_in - child_out
+
             context.update({
                 'families': families,
                 'current_family_role': current_family_role,
@@ -109,6 +121,7 @@ def landing_page(request):
                 'open_tasks': open_tasks,
                 'recent_completed_tasks': recent_completed_tasks,
                 'current_family': current_family,
+                'my_wallet_balance': my_wallet_balance,
             })
             log.debug(
                 "Landing page data user_id=%s families=%s unread=%s",

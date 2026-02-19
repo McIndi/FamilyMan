@@ -1,0 +1,14 @@
+{% extends 'project/base.html' %}
+{% block content %}
+<h1>Cash In</h1>
+{% if source_expense %}
+<p style="color: #888;">Pre-filled from expense: <strong>${{ source_expense.amount }}</strong>
+{% if source_expense.note %} &mdash; {{ source_expense.note }}{% endif %}</p>
+{% endif %}
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Record Cash In</button>
+    <a href="{% url 'wallet_view' %}">Cancel</a>
+</form>
+{% endblock %}

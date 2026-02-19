@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import Fund, Expense, Category, Receipt
+from .models import Fund, Expense, Category, Receipt, WalletTransaction
 
 
 class FundForm(forms.ModelForm):
@@ -43,3 +43,22 @@ class CategoryForm(forms.ModelForm):
     class Meta:
         model = Category
         fields = ['name', 'description']
+
+
+class WalletTransactionForm(forms.ModelForm):
+    class Meta:
+        model = WalletTransaction
+        fields = ['amount', 'date', 'note']
+        widgets = {
+            'date': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['date'].input_formats = ['%Y-%m-%dT%H:%M']
+
+    def clean_amount(self):
+        amount = self.cleaned_data.get('amount')
+        if amount is not None and amount < 0:
+            raise ValidationError('Amount cannot be negative.')
+        return amount

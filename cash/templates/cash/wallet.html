@@ -1,0 +1,53 @@
+{% extends 'project/base.html' %}
+{% block content %}
+<h1>My Wallet</h1>
+<div style="margin-bottom: 1em;">
+    <p><strong>Cash on Hand:</strong> <span style="font-size: 1.2em;">${{ wallet_balance|floatformat:2 }}</span></p>
+    <p style="color: #888; font-size: 0.9em;">
+        Total In: ${{ cash_in_total|floatformat:2 }} &nbsp;|&nbsp;
+        Total Out: ${{ cash_out_total|floatformat:2 }}
+    </p>
+</div>
+<div style="margin-bottom: 1em;">
+    <a class="buttonLink" href="{% url 'add_wallet_cash_in' %}">+ Cash In</a>
+    <a class="buttonLink" href="{% url 'add_wallet_cash_out' %}">- Cash Out</a>
+</div>
+<table>
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Note</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for txn in transactions %}
+            <tr>
+                <td>{{ txn.date|date:"M d, Y" }}</td>
+                <td>
+                    {% if txn.direction == 'in' %}
+                        <strong style="color: #198754;">+${{ txn.amount }}</strong>
+                    {% else %}
+                        <strong style="color: #d6336c;">-${{ txn.amount }}</strong>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if txn.note %}{{ txn.note }}{% else %}-{% endif %}
+                    {% if txn.source_expense %}
+                        <small style="color: #888;">(from ATM withdrawal)</small>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'edit_wallet_transaction' txn.id %}">Edit</a> |
+                    <a href="{% url 'delete_wallet_transaction' txn.id %}">Delete</a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="4">No wallet transactions yet.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

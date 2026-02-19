@@ -7,8 +7,8 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Sum
 from django.db.models.functions import TruncDate
 from django.http import HttpResponseForbidden
-from .models import Fund, Expense, Category, Receipt
-from .forms import FundForm, ExpenseForm, ReceiptForm, CategoryForm
+from .models import Fund, Expense, Category, Receipt, WalletTransaction
+from .forms import FundForm, ExpenseForm, ReceiptForm, CategoryForm, WalletTransactionForm
 from django.utils import timezone
 from datetime import timedelta
 from project.models import Membership
@@ -433,4 +433,153 @@ def cash_transaction_dashboard(request):
 		})
 	except Exception:
 		log.exception("Unhandled error in cash_transaction_dashboard user_id=%s", request.user.id)
+		raise
+
+
+def _has_wallet_access(user, family):
+	"""Any family member can access their own wallet."""
+	return Membership.objects.filter(user=user, family=family).exists()
+
+
+@login_required
+def wallet_view(request):
+	log = logging.getLogger(__name__)
+	try:
+		current_family = getattr(request, 'current_family', None)
+		if not current_family:
+			return redirect('switch_family')
+		if not _has_wallet_access(request.user, current_family):
+			return HttpResponseForbidden("You are not a member of this family.")
+
+		transactions = WalletTransaction.objects.filter(
+			user=request.user,
+			family=current_family,
+		).order_by('-date')
+
+		cash_in_total = transactions.filter(direction=WalletTransaction.DIRECTION_IN).aggregate(total=Sum('amount'))['total'] or 0
+		cash_out_total = transactions.filter(direction=WalletTransaction.DIRECTION_OUT).aggregate(total=Sum('amount'))['total'] or 0
+		wallet_balance = cash_in_total - cash_out_total
+
+		log.debug("Wallet view user_id=%s family_id=%s balance=%s", request.user.id, current_family.id, wallet_balance)
+		return render(request, 'cash/wallet.html', {
+			'transactions': transactions,
+			'wallet_balance': wallet_balance,
+			'cash_in_total': cash_in_total,
+			'cash_out_total': cash_out_total,
+		})
+	except Exception:
+		log.exception("Unhandled error in wallet_view user_id=%s", request.user.id)
+		raise
+
+
+@login_required
+def add_wallet_cash_in(request, expense_id=None):
+	log = logging.getLogger(__name__)
+	try:
+		current_family = getattr(request, 'current_family', None)
+		if not current_family:
+			return redirect('switch_family')
+		if not _has_wallet_access(request.user, current_family):
+			return HttpResponseForbidden("You are not a member of this family.")
+
+		source_expense = None
+		initial = {}
+		if expense_id:
+			source_expense = get_object_or_404(Expense, id=expense_id, family=current_family)
+			initial = {'amount': source_expense.amount, 'date': source_expense.date, 'note': source_expense.note or 'ATM Withdrawal'}
+
+		if request.method == 'POST':
+			form = WalletTransactionForm(request.POST)
+			if form.is_valid():
+				txn = form.save(commit=False)
+				txn.user = request.user
+				txn.family = current_family
+				txn.direction = WalletTransaction.DIRECTION_IN
+				if expense_id and source_expense:
+					txn.source_expense = source_expense
+				txn.save()
+				log.info("Wallet cash-in added user_id=%s family_id=%s txn_id=%s", request.user.id, current_family.id, txn.id)
+				return redirect('wallet_view')
+		else:
+			form = WalletTransactionForm(initial=initial)
+			log.info("Wallet cash-in form rendered user_id=%s", request.user.id)
+
+		return render(request, 'cash/add_wallet_cash_in.html', {'form': form, 'source_expense': source_expense})
+	except Exception:
+		log.exception("Unhandled error in add_wallet_cash_in user_id=%s", request.user.id)
+		raise
+
+
+@login_required
+def add_wallet_cash_out(request):
+	log = logging.getLogger(__name__)
+	try:
+		current_family = getattr(request, 'current_family', None)
+		if not current_family:
+			return redirect('switch_family')
+		if not _has_wallet_access(request.user, current_family):
+			return HttpResponseForbidden("You are not a member of this family.")
+
+		if request.method == 'POST':
+			form = WalletTransactionForm(request.POST)
+			if form.is_valid():
+				txn = form.save(commit=False)
+				txn.user = request.user
+				txn.family = current_family
+				txn.direction = WalletTransaction.DIRECTION_OUT
+				txn.save()
+				log.info("Wallet cash-out added user_id=%s family_id=%s txn_id=%s", request.user.id, current_family.id, txn.id)
+				return redirect('wallet_view')
+		else:
+			form = WalletTransactionForm()
+			log.info("Wallet cash-out form rendered user_id=%s", request.user.id)
+
+		return render(request, 'cash/add_wallet_cash_out.html', {'form': form})
+	except Exception:
+		log.exception("Unhandled error in add_wallet_cash_out user_id=%s", request.user.id)
+		raise
+
+
+@login_required
+def edit_wallet_transaction(request, transaction_id):
+	log = logging.getLogger(__name__)
+	try:
+		current_family = getattr(request, 'current_family', None)
+		if not current_family:
+			return redirect('switch_family')
+		txn = get_object_or_404(WalletTransaction, id=transaction_id, user=request.user, family=current_family)
+
+		if request.method == 'POST':
+			form = WalletTransactionForm(request.POST, instance=txn)
+			if form.is_valid():
+				form.save()
+				log.info("Wallet transaction edited user_id=%s txn_id=%s", request.user.id, txn.id)
+				return redirect('wallet_view')
+		else:
+			form = WalletTransactionForm(instance=txn)
+			log.info("Wallet edit form rendered user_id=%s txn_id=%s", request.user.id, txn.id)
+
+		return render(request, 'cash/edit_wallet_transaction.html', {'form': form, 'txn': txn})
+	except Exception:
+		log.exception("Unhandled error in edit_wallet_transaction user_id=%s txn_id=%s", request.user.id, transaction_id)
+		raise
+
+
+@login_required
+def delete_wallet_transaction(request, transaction_id):
+	log = logging.getLogger(__name__)
+	try:
+		current_family = getattr(request, 'current_family', None)
+		if not current_family:
+			return redirect('switch_family')
+		txn = get_object_or_404(WalletTransaction, id=transaction_id, user=request.user, family=current_family)
+
+		if request.method == 'POST':
+			txn.delete()
+			log.info("Wallet transaction deleted user_id=%s txn_id=%s", request.user.id, transaction_id)
+			return redirect('wallet_view')
+
+		return render(request, 'cash/confirm_delete_wallet_transaction.html', {'txn': txn})
+	except Exception:
+		log.exception("Unhandled error in delete_wallet_transaction user_id=%s txn_id=%s", request.user.id, transaction_id)
 		raise

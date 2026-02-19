@@ -52,6 +52,13 @@
 	</section>
 	{% endif %}
 
+	<!-- My Wallet summary -->
+	<section style="flex: 1 1 300px; min-width: 250px;">
+		<h2>My Wallet</h2>
+		<p>Cash on Hand: <strong>${{ my_wallet_balance|floatformat:2 }}</strong></p>
+		<a href="{% url 'wallet_view' %}">View My Wallet</a>
+	</section>
+
 	<!-- Shopping list summary -->
 	<section style="flex: 1 1 300px; min-width: 250px;">
 		<h2>Shopping List Needs</h2>
@@ -132,6 +139,7 @@
 						<strong>{{ summary.child.username }}</strong>: {{ summary.total }} points
 						<span style="color: #4caf50;">(+{{ summary.merit_points }})</span>
 						<span style="color: #f44336;">(-{{ summary.demerit_points }})</span>
+						&nbsp;&mdash;&nbsp;Wallet: <strong>${{ summary.wallet_balance|floatformat:2 }}</strong>
 					</span>
 				</li>
 			{% empty %}

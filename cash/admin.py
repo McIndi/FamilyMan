@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Fund, Expense, Receipt
+from .models import Category, Fund, Expense, Receipt, WalletTransaction
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -25,3 +25,9 @@ class ReceiptAdmin(admin.ModelAdmin):
     list_display = ('expense', 'family', 'uploaded_at')
     list_filter = ('family', 'uploaded_at')
     search_fields = ('expense__note',)
+
+@admin.register(WalletTransaction)
+class WalletTransactionAdmin(admin.ModelAdmin):
+    list_display = ('user', 'family', 'direction', 'amount', 'date', 'note')
+    list_filter = ('family', 'direction', 'date')
+    search_fields = ('note', 'user__username')
