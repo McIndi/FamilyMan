@@ -40,7 +40,7 @@
                                 {{ task.created_by.username }}
                             </span>
                         </td>
-                        <td>{{ task.description|default:"—" }}</td>
+                        <td>{{ task.description|default:"—"|linebreaksbr }}</td>
                         <td>
                             {% if is_parent or task.created_by_id == user.id %}
                                 <a href="{% url 'task_edit' task.id %}">Edit</a>
