@@ -1,0 +1,40 @@
+{% extends 'project/base.html' %}
+
+{% block title %}Past Dinners{% endblock %}
+
+{% block content %}
+<h1>Past Dinners</h1>
+<p><a href="{% url 'dinner_index' %}">Back to current dinners</a></p>
+
+{% if page_obj %}
+    {% for day in page_obj %}
+        <article>
+            <header>
+                <h3>{{ day.date|date:"l, M d, Y" }}</h3>
+            </header>
+            <p>
+                <strong>What we ate:</strong>
+                {% if day.dinner_eaten %}
+                    {{ day.dinner_eaten }}
+                {% else %}
+                    Not recorded
+                {% endif %}
+            </p>
+        </article>
+    {% endfor %}
+
+    {% if page_obj.paginator.num_pages > 1 %}
+        <nav>
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            {% endif %}
+            <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}">Next</a>
+            {% endif %}
+        </nav>
+    {% endif %}
+{% else %}
+    <p>No past dinners yet.</p>
+{% endif %}
+{% endblock %}

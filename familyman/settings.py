@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'merits',
     'cash',
     'tasks',
+    'dinner',
 ]
 
 MIDDLEWARE = [

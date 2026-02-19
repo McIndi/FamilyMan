@@ -1,0 +1,131 @@
+{% extends 'project/base.html' %}
+
+{% block title %}Dinner{% endblock %}
+
+{% block extra_head %}
+<style>
+    .danger-button {
+        background-color: var(--pico-form-element-invalid-active-border-color);
+        border-color: var(--pico-form-element-invalid-active-border-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Dinner</h1>
+
+{% if is_parent %}
+<section>
+    <h2>Add Dinner Option</h2>
+    <form method="post" action="{% url 'dinner_add_option' %}">
+        {% csrf_token %}
+        {{ add_option_form.as_p }}
+        <button type="submit">Add Option</button>
+    </form>
+</section>
+{% endif %}
+
+<section style="margin-top: 2rem;">
+    <h2>By Day</h2>
+    <p><a href="{% url 'dinner_past' %}">View past dinners</a></p>
+    {% if dinner_days %}
+        {% for day in dinner_days %}
+            <article>
+                <header>
+                    <h3>{{ day.date|date:"l, M d, Y" }}</h3>
+                </header>
+
+                {% if day.options.all %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Option</th>
+                                <th>Votes</th>
+                                <th>Action</th>
+                                {% if is_parent %}
+                                    <th>Manage</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for option in day.options.all %}
+                                <tr>
+                                    <td>{{ option.name }}</td>
+                                    <td>{{ option.votes.count }}</td>
+                                    <td>
+                                        {% if day.options.count > 1 %}
+                                            <form method="post" action="{% url 'dinner_vote' day.id %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="option_id" value="{{ option.id }}">
+                                                {% if option.id in voted_option_ids %}
+                                                    <button type="submit" disabled>Your vote</button>
+                                                {% else %}
+                                                    <button type="submit">Vote</button>
+                                                {% endif %}
+                                            </form>
+                                        {% else %}
+                                            <small>Voting not needed</small>
+                                        {% endif %}
+                                    </td>
+                                    {% if is_parent %}
+                                        <td>
+                                            <details style="margin-bottom: 0.5rem;">
+                                                <summary>Edit</summary>
+                                                <form method="post" action="{% url 'dinner_edit_option' option.id %}" style="margin-top: 0.5rem;">
+                                                    {% csrf_token %}
+                                                    <input type="text" name="name" value="{{ option.name }}" required>
+                                                    <button type="submit">Save</button>
+                                                </form>
+                                            </details>
+                                            <form method="post" action="{% url 'dinner_delete_option' option.id %}" onsubmit="return confirm('Delete this dinner option? This cannot be undone.');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="danger-button">Delete</button>
+                                            </form>
+                                        </td>
+                                    {% endif %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>No options added yet.</p>
+                {% endif %}
+
+                {% if is_parent %}
+                    <form method="post" action="{% url 'dinner_add_option' %}" style="margin-top: 0.75rem;">
+                        {% csrf_token %}
+                        <input type="hidden" name="date" value="{{ day.date|date:'Y-m-d' }}">
+                        <label>
+                            Add option for {{ day.date|date:"M d, Y" }}
+                            <input type="text" name="name" placeholder="Dinner option" required>
+                        </label>
+                        <button type="submit">Add Option</button>
+                    </form>
+                {% endif %}
+
+                <p>
+                    <strong>What we ate:</strong>
+                    {% if day.dinner_eaten %}
+                        {{ day.dinner_eaten }}
+                    {% else %}
+                        Not recorded
+                    {% endif %}
+                </p>
+
+                {% if is_parent %}
+                    <details>
+                        <summary>Record / update final dinner</summary>
+                        <form method="post" action="{% url 'dinner_record_result' day.id %}">
+                            {% csrf_token %}
+                            {{ day.record_form.as_p }}
+                            <button type="submit">Save</button>
+                        </form>
+                    </details>
+                {% endif %}
+            </article>
+        {% endfor %}
+    {% else %}
+        <p>No dinner days yet. {% if is_parent %}Add an option to get started.{% endif %}</p>
+    {% endif %}
+</section>
+{% endblock %}

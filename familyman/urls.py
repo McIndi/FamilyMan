@@ -27,6 +27,7 @@ urlpatterns = [
     path('merits/', include('merits.urls')),  # Include mail app URLs
     path('cash/', include('cash.urls')),  # Include cash app URLs
     path('tasks/', include('tasks.urls')),  # Include tasks app URLs
+    path('dinner/', include('dinner.urls')),  # Include dinner app URLs
     path('', include('project.urls')),  # Include project app URLs
 ]
 
