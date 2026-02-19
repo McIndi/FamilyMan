@@ -50,7 +50,13 @@
                         <tbody>
                             {% for option in day.options.all %}
                                 <tr>
-                                    <td>{{ option.name }}</td>
+                                    <td>
+                                        <strong>{{ option.name }}</strong>
+                                        {% if option.notes %}
+                                            <br>
+                                            <small>{{ option.notes|linebreaksbr }}</small>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ option.votes.count }}</td>
                                     <td>
                                         {% if day.options.count > 1 %}
@@ -73,7 +79,14 @@
                                                 <summary>Edit</summary>
                                                 <form method="post" action="{% url 'dinner_edit_option' option.id %}" style="margin-top: 0.5rem;">
                                                     {% csrf_token %}
-                                                    <input type="text" name="name" value="{{ option.name }}" required>
+                                                    <label>
+                                                        Name
+                                                        <input type="text" name="name" value="{{ option.name }}" required>
+                                                    </label>
+                                                    <label>
+                                                        Notes
+                                                        <textarea name="notes" rows="3" placeholder="Optional notes (pros/cons, cost, prep time, etc.)">{{ option.notes }}</textarea>
+                                                    </label>
                                                     <button type="submit">Save</button>
                                                 </form>
                                             </details>
@@ -98,6 +111,10 @@
                         <label>
                             Add option for {{ day.date|date:"M d, Y" }}
                             <input type="text" name="name" placeholder="Dinner option" required>
+                        </label>
+                        <label>
+                            Notes
+                            <textarea name="notes" rows="2" placeholder="Optional notes (pros/cons, cost, prep time, etc.)"></textarea>
                         </label>
                         <button type="submit">Add Option</button>
                     </form>

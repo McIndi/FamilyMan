@@ -130,6 +130,7 @@ def add_dinner_option(request):
 
 		date = form.cleaned_data['date']
 		option_name = form.cleaned_data['name'].strip()
+		option_notes = form.cleaned_data.get('notes', '').strip()
 		dinner_day, _ = DinnerDay.objects.get_or_create(family=family, date=date)
 		option_exists = DinnerOption.objects.filter(dinner_day=dinner_day, name=option_name).exists()
 		if option_exists:
@@ -139,6 +140,7 @@ def add_dinner_option(request):
 		DinnerOption.objects.create(
 			dinner_day=dinner_day,
 			name=option_name,
+			notes=option_notes,
 			created_by=request.user,
 		)
 		messages.success(request, 'Dinner option added.')
@@ -200,6 +202,7 @@ def edit_dinner_option(request, option_id):
 			return redirect('dinner_index')
 
 		new_name = request.POST.get('name', '').strip()
+		new_notes = request.POST.get('notes', '').strip()
 		if not new_name:
 			messages.error(request, 'Dinner option name is required.')
 			return redirect('dinner_index')
@@ -213,7 +216,8 @@ def edit_dinner_option(request, option_id):
 			return redirect('dinner_index')
 
 		option.name = new_name
-		option.save(update_fields=['name'])
+		option.notes = new_notes
+		option.save(update_fields=['name', 'notes'])
 		messages.success(request, 'Dinner option updated.')
 		return redirect('dinner_index')
 	except Exception:

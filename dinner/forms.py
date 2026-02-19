@@ -6,6 +6,15 @@ class AddDinnerOptionForm(forms.Form):
         max_length=255,
         widget=forms.TextInput(attrs={'placeholder': 'Dinner option (e.g., Tacos)'}),
     )
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                'rows': 3,
+                'placeholder': 'Optional notes (pros/cons, cost, prep time, etc.)',
+            }
+        ),
+    )
 
 
 class RecordDinnerForm(forms.Form):

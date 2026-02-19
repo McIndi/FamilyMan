@@ -35,6 +35,7 @@ class DinnerDay(models.Model):
 class DinnerOption(models.Model):
 	dinner_day = models.ForeignKey(DinnerDay, on_delete=models.CASCADE, related_name='options')
 	name = models.CharField(max_length=255)
+	notes = models.TextField(blank=True)
 	created_by = models.ForeignKey(
 		settings.AUTH_USER_MODEL,
 		on_delete=models.CASCADE,

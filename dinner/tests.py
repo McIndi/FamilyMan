@@ -36,7 +36,7 @@ class DinnerViewsTests(TestCase):
 
 		response = self.client.post(
 			reverse('dinner_add_option'),
-			{'date': '2026-02-20', 'name': 'Tacos'},
+			{'date': '2026-02-20', 'name': 'Tacos', 'notes': 'Kids love this, quick prep.'},
 			follow=True,
 		)
 
@@ -46,6 +46,7 @@ class DinnerViewsTests(TestCase):
 			DinnerOption.objects.filter(
 				dinner_day=created_day,
 				name='Tacos',
+				notes='Kids love this, quick prep.',
 				created_by=self.parent,
 			).exists()
 		)
@@ -129,13 +130,14 @@ class DinnerViewsTests(TestCase):
 
 		response = self.client.post(
 			reverse('dinner_edit_option', args=[option.id]),
-			{'name': 'Turkey Burgers'},
+			{'name': 'Turkey Burgers', 'notes': 'Lower fat and still tasty.'},
 			follow=True,
 		)
 
 		self.assertEqual(response.status_code, 200)
 		option.refresh_from_db()
 		self.assertEqual(option.name, 'Turkey Burgers')
+		self.assertEqual(option.notes, 'Lower fat and still tasty.')
 
 	def test_parent_can_delete_option_and_votes_are_deleted(self):
 		self._login_with_family(self.parent, self.family)
