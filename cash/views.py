@@ -295,6 +295,9 @@ def cash_transaction_list(request):
 
 		funds = Fund.objects.filter(family=current_family)
 		expenses = Expense.objects.filter(family=current_family)
+		cash_total = funds.aggregate(total=Sum('amount'))['total'] or 0
+		expense_total = expenses.aggregate(total=Sum('amount'))['total'] or 0
+		family_cash = cash_total - expense_total
 		if start:
 			funds = funds.filter(date__gte=start)
 			expenses = expenses.filter(date__gte=start)
@@ -305,10 +308,6 @@ def cash_transaction_list(request):
 			expenses = expenses.filter(category_id__in=category_ids)
 
 		categories = Category.objects.filter(family=current_family)
-
-		cash_total = funds.aggregate(total=Sum('amount'))['total'] or 0
-		expense_total = expenses.aggregate(total=Sum('amount'))['total'] or 0
-		family_cash = cash_total - expense_total
 
 		log.debug(
 			"Transaction list data user_id=%s family_id=%s period=%s search=%s categories=%s",

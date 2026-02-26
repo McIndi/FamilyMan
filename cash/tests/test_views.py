@@ -111,6 +111,33 @@ class CashViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("family_cash", response.context)
 
+    def test_cash_transaction_list_family_cash_is_not_filter_scoped(self):
+        """Available cash uses all-time totals, not only filtered table rows."""
+        Fund.objects.create(user=self.user, family=self.family, amount="100.00", note="Paycheck")
+        category = Category.objects.create(family=self.family, name="Groceries")
+        Expense.objects.create(
+            user=self.user,
+            family=self.family,
+            category=category,
+            amount="25.00",
+            note="Store",
+        )
+        Expense.objects.create(
+            user=self.user,
+            family=self.family,
+            category=category,
+            amount="10.00",
+            note="Other",
+        )
+
+        response = self.client.get(
+            reverse("cash_transaction_list"),
+            {"period": "month", "search": "Store"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["family_cash"], 65)
+
     def test_dashboard_renders_chart_data(self):
         """Dashboard returns chart data arrays matching the days window."""
         response = self.client.get(
